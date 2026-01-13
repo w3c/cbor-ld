@@ -468,14 +468,10 @@ map. The following sections define the exact mechanism by which this can be acco
 an arbitrary CBOR-LD consumer to decompress any CBOR-LD payload that conforms to this specification.
     </p>
     <p>
-To this end, we have registered the CBOR tag `0xCB1D` (tag value 51997) to be used for CBOR-LD.
-The data that follows this tag value is used to look up what compression table(s) are needed
-to decompress the CBOR-LD context URLs.
-    </p>
-    <p class="issue">
-This exact tag value has not yet been officially registered with
-<a href="https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml">the IANA CBOR
-Tag Registry</a>. The exact value is subject to change.
+To this end, the CBOR tag `0xCB1D` (tag value 51997) is registered at 
+<a href="https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml">the IANA CBOR tag registry</a> to be used for CBOR-LD.
+The data that immediately follows this tag value identifies what use-case-specific registry entry (if any) was used to create
+the compressed payload.
     </p>
     <section>
       <h2>CBOR-LD Registry Entry Id</h2>
