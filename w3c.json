@@ -1,10 +1,5 @@
-{
-  "group": [
-    "107714"
-  ],
-  "contacts": [
-    "iherman"
-  ],
-  "shortName": "cborld",
-  "repo-type": "rec-track"
+ {
+    "group":      ["wg/json-ld"]
+,   "contacts":   ["pchampin", "bigbluehat"]
+,   "repo-type":  "rec-track"
 }
