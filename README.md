@@ -1,6 +1,6 @@
 # CBOR-LD 1.0
 
-This is the repository of the W3C JSON-LD CG's specification on CBOR-LD 1.0, developed by the [JSON-LD Community Group](https://www.w3.org/2018/json-ld-wg/). The editors’ draft of the specification can also be [read directly](https://json-ld.github.io/cbor-ld-spec/).
+This is the repository of the W3C JSON-LD CG's specification on CBOR-LD 1.0, developed by the [JSON-LD Community Group](https://www.w3.org/2018/json-ld-wg/). The editors’ draft of the specification can also be [read directly](https://w3c.github.io/cbor-ld/).
 
 ## Contributing to the Repository
 
