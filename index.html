@@ -617,8 +617,8 @@ This algorithm takes a CBOR-LD payload `cborldBytes`, and returns a JSON-LD docu
         </p>
         <ol>
           <li>
-Set `result` to the result of passing `registryEntryId` and `cborldBytes` to
-<a href="#get-cbor-tag-structure-algorithm"></a>.
+Set `result` to the result of passing `cborldBytes` to
+<a href="#get-registry-entry-id-algorithm"></a>.
           </li>
           <li>
 Set `state`.`registryEntryId` to `result`.`registryEntryId` and `suffix` to `result`.`suffix`.
@@ -627,25 +627,32 @@ Set `state`.`registryEntryId` to `result`.`registryEntryId` and `suffix` to `res
 Set `state` to an empty map.
           </li>
           <li>
+If the registry entry associated with `state`.`registryEntryId` uses semantic compression:
+          <ol>
+            <li>
 Set `state.strategy` to "decompression".
-          </li>
-          <li>
+            </li>
+            <li>
 For each entry <em>`type`: `map`</em> in the `typeTables` array in the CBOR-LD Varint Registry Entry
 associated with `registryEntryId`, add that entry to `state`.`typeTable`, and set the value of `type`
 in `state`.`reverseTypeTable` to `inverseMap`, where `inverseMap` is `map` with the mapping inverted.
-          </li>
-          <li>
+            </li>
+            <li>
 Set `state` to the result of passing `state` to
 <a href="#initialize-conversion-algorithm"></a>.
-          </li>
-          <li>
+            </li>
+            <li>
 Set `input` to the result of decoding `suffix` from bytes to a map.
-          </li>
-          <li>
+            </li>
+            <li>
 Set `jsonldDocument` to the result of passing `state` and `input` as `inputDocuments`
 to <a href="#convert-document-algorithm"></a>.
+            </li>
+          </ol>
           </li>
-
+          <li>
+Otherwise, set `jsonldDocument` to the result of parsing `cborldBytes`.
+          </li>
           <li>
 Return `jsonldDocument`.
           </li>
