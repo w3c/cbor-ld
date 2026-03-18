@@ -556,12 +556,12 @@ To register an entry, follow the instructions in <a href="https://github.com/jso
   <section class="normative">
     <h1>Algorithms</h1>
 In this section, we specify the algorithms required to convert JSON-LD to CBOR-LD
-and vice versa. We provide first the context processing algorithms, which are required
-for both decompression and compression; we then provide the mode-specific algorithms.
-    <section>
+and vice versa. The majority of the algorithms in this section relate to the semantic
+compression feature and are not used in conversions between CBOR-LD and JSON-LD where
+the CBOR-LD payload does not use semantic compression.
       <h2>Encoding and Decoding</h2>
       <section>
-        <h3>JSON-LD to CBOR-LD Compression Algorithm</h3>
+        <h3>JSON-LD to CBOR-LD Algorithm</h3>
         <p>
 This algorithm takes a map `typeTable`, an integer `registryEntryId`, and a JSON-LD
 document `jsonldDocument` as inputs, and returns a hexadecimal string `cborldBytes`.
@@ -575,25 +575,31 @@ Set `prefix` to the result of passing `registryEntryId` to
 Set `state` to an empty map.
           </li>
           <li>
+If the registry entry associated with `registryEntryId` requires semantic compression:
+          <ol>
+            <li>
 Set `state.strategy` to "compression".
-          </li>
-          <li>
+            </li>
+            <li>
 Set `state.typeTable` to `typeTable`.
-          </li>
-          <li>
+            </li>
+            <li>
 Set `state.registryEntryId` to `registryEntryId`.
-          </li>
-          <li>
+            </li>
+            <li>
 Set `state` to the result of passing `state` to
 <a href="#initialize-conversion-algorithm"></a>.
-          </li>
-          <li>
+            </li>
+            <li>
 Set `output` to the result of passing `state` and `jsonldDocument`
 as `inputDocument` to <a href="#convert-document-algorithm"></a>.
-          </li>
-          <li>
+            </li>
+            <li>
 Set `suffix` to the CBOR encoding of `output`.
+            </li>
+          </ol>
           </li>
+Otherwise, set `suffix` to the CBOR encoding of `jsonldDocument`.
           <li>
 Set `cborldBytes` to a hexidecimal encoding of `prefix` prepended to `suffix`.
           </li>
