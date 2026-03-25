@@ -453,16 +453,15 @@ case is known as a <i>processing model</i>.
   <section class="informative">
     <h1>Semantic Compression</h1>
       <p>
-
-      </p>
-
-The first step in decoding a CBOR-LD payload is to recreate the term codec map that was used to encode it by processing the contexts in the payload. However, the contexts needed to create the term codec map can have their URLs encoded as integers by CBOR-LD. If a CBOR-LD payload contains context URLs compressed in such a way, the consumer of the CBOR-LD needs to know what compression tables (maps from JSON-LD terms to integers) were used to compress the context URLs during creation to be able to reconstruct the term codec map. The following sections define the exact mechanism by which this can be accomplished, allowing an arbitrary CBOR-LD consumer to decompress any CBOR-LD payload that conforms to this specification.
-
+Semantic compression is a powerful tool for creating compact CBOR-LD payloads. The core idea is
+to use the information content in external JSON-LD context objects to compress JSON-LD terms.
+Because these context objects are available to both the creator and the consumer of the payload,
+this is done in an invertible way.
+    </p>
     <p>
-The general CBOR-LD encoding algorithm takes a JSON-LD Document and does
+The general semantic compression algorithm takes a JSON-LD Document and does
 the following:
     </p>
-
     <ul>
       <li>
 Determine if JSON-LD can be compressed (@context values in JSON-LD document that
@@ -476,14 +475,11 @@ and counting up.
       </li>
       <li>
 Encoding the JSON-LD Document as CBOR-LD consists of replacing every key with
-the byte value associated with the term. For every value that is `"@type":
-"@id"`, replace the value with the byte value associated with the term.
+the byte value associated with the term.
       </li>
       <li>
-Decoding the CBOR-LD Bytes as JSON-LD consists of replacing every CBOR key with
-the associated value in the term codec map. For every value that is
-`"@type": "@id"`, replace the value with the byte value associated with the
-term.
+Decoding the CBOR-LD Bytes as JSON-LD consists of replacing every CBOR byte value with
+the associated key in the term codec map.
       </li>
     </ul>
   </section>
