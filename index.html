@@ -468,6 +468,15 @@ To this end, the CBOR tag `0xCB1D` (tag value 51997) has been registered at
 The data that immediately follows this tag value identifies what use-case-specific registry entry (if any) was used to create
 the compressed payload.
     </p>
+    <p>
+CBOR-LD payloads MUST be structured such that the item tagged with tag `0xCB1D` is
+a two-element array, and the first element MUST be a major type 0 integer. This
+integer is a CBOR-LD Registry Entry ID.
+      </p>
+      <p>
+The value of the CBOR-LD Registry Entry ID is then used to look up a <b>CBOR-LD Registry Entry</b>
+in the <b>CBOR-LD Registry</b>.
+      </p>
 
 The first step in decoding a CBOR-LD payload is to recreate the term codec
 map that was used to encode it by processing the contexts in the payload. However,
@@ -478,24 +487,12 @@ were used to compress the context URLs during creation to be able to reconstruct
 map. The following sections define the exact mechanism by which this can be accomplished, allowing
 an arbitrary CBOR-LD consumer to decompress any CBOR-LD payload that conforms to this specification.
     <section>
-      <h2>CBOR-LD Registry Entry Id</h2>
+      <h2>CBOR-LD Registry</h2>
       <p>
 To enable unbounded extension on possible use cases for CBOR-LD that require different
 compression table material for consumption while working with a single
 CBOR tag value, we define the following.
       </p>
-      <p>
-CBOR-LD payloads MUST be structured such that the item tagged with tag `0xCB1D` is
-a two-element array, and the first element MUST be a major type 0 integer. This
-integer is a CBOR-LD Registry Entry ID.
-      </p>
-      <p>
-The value of the CBOR-LD Registry Entry ID is then used to look up a <b>CBOR-LD Registry Entry</b>
-in the <b>CBOR-LD Registry</b>.
-      </p>
-    </section>
-    <section>
-      <h2>CBOR-LD Registry</h2>
       <p>
 The <b>CBOR-LD Registry</b> is a global list that provides
 consumers of CBOR-LD payloads the information they need to reconstruct the term codec map
@@ -503,10 +500,10 @@ required for decompression. A <b>CBOR-LD Registry Entry</b> contains the followi
       </p>
         <ol>
           <li>
-Registry Entry ID: a positive integer.
+`Registry Entry ID`: a positive integer.
           </li>
           <li>
-Use Case: what type of CBOR-LD payload this entry is used for.
+`Use Case`: what type of CBOR-LD payload this entry is used for.
           </li>
           <li>
 `typeTables`: an array containing what `Type Tables` (use-case-specific compression tables for
@@ -514,11 +511,16 @@ compressing typed values rather than JSON-LD terms) are to be used for this regi
           </li>
           <li>
 `processingModel`: what processing model is used for this registry entry. A processing model
-specifies how auto-generated CBOR-LD values are created from JSON-LD contexts as well as what
-type encoders are used alongside the `Type Tables` (e.g. how to partially compress an
-`xsd:dateTime` value that does not appear in `Type Table`). The default processing model,
-which will be defined later in this specification, will be used unless otherwise specified
-in the Registry Entry.
+specifies the following:
+            <ol>
+              <li>
+Whether or not semantic compression is used for dynamic JSON-LD term compression,
+              </li>
+              <li>
+What codecs are used for dynamic typed value compression.
+              </li>
+            </ol>
+The `default` processing model uses semantic compression and includes the codecs specified in this document.
           </li>
           <li>
 Provisional: a yes/no flag indicating whether the entry is provisional. Provisional entries
