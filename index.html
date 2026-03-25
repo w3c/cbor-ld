@@ -458,6 +458,17 @@ term.
   <section class="normative">
     <h1>CBOR Tags for CBOR-LD</h1>
     <p>
+CBOR-LD payloads need to be identifiable as such at the binary level. CBOR natively supports
+this via its "tag" feature - a header value in the binary data describes the rest of the payload
+via a global registry.
+    </p>
+    <p>
+To this end, the CBOR tag `0xCB1D` (tag value 51997) has been registered at
+<a href="https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml">the IANA CBOR tag registry</a> to be used for CBOR-LD.
+The data that immediately follows this tag value identifies what use-case-specific registry entry (if any) was used to create
+the compressed payload.
+    </p>
+
 The first step in decoding a CBOR-LD payload is to recreate the term codec
 map that was used to encode it by processing the contexts in the payload. However,
 the contexts needed to create the term codec map can have their URLs encoded as integers
@@ -466,13 +477,6 @@ consumer of the CBOR-LD needs to know what compression tables (maps from JSON-LD
 were used to compress the context URLs during creation to be able to reconstruct the term codec
 map. The following sections define the exact mechanism by which this can be accomplished, allowing
 an arbitrary CBOR-LD consumer to decompress any CBOR-LD payload that conforms to this specification.
-    </p>
-    <p>
-To this end, the CBOR tag `0xCB1D` (tag value 51997) has been registered at
-<a href="https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml">the IANA CBOR tag registry</a> to be used for CBOR-LD.
-The data that immediately follows this tag value identifies what use-case-specific registry entry (if any) was used to create
-the compressed payload.
-    </p>
     <section>
       <h2>CBOR-LD Registry Entry Id</h2>
       <p>
@@ -505,8 +509,8 @@ Registry Entry ID: a positive integer.
 Use Case: what type of CBOR-LD payload this entry is used for.
           </li>
           <li>
-`typeTables`: an array containing what `Type Tables` are to be used for this
-type of payload.
+`typeTables`: an array containing what `Type Tables` (use-case-specific compression tables for
+compressing typed values rather than JSON-LD terms) are to be used for this registry entry.
           </li>
           <li>
 `processingModel`: what processing model is used for this registry entry. A processing model
