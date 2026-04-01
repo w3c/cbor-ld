@@ -511,8 +511,9 @@ any) that was used to create the compressed payload.
     </p>
     <p>
 CBOR-LD payloads MUST be structured such that the item tagged with tag `0xCB1D` is
-a two-element array, and the first element MUST be a major type 0 integer. This
-integer is a CBOR-LD Registry Entry ID. The binary structure is `tag([registryEntryId, payload])`.
+a two-element array, and the first element MUST be a
+<a href=https://datatracker.ietf.org/doc/html/rfc8949#name-major-types>major type 0 integer</a>.
+This integer is a CBOR-LD Registry Entry ID. The binary structure is `tag([registryEntryId, payload])`.
       </p>
       <p>
 The value of the CBOR-LD Registry Entry ID is then used to look up a <b>CBOR-LD Registry Entry</b>
