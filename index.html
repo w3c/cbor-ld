@@ -429,28 +429,36 @@ At a high level, CBOR-LD is a compact, binary serialization for JSON-LD that all
 the following mechanisms for additional compression:
       <ul>
         <li>
-<b>Semantic compression</b>: Dynamically creates a mapping from JSON-LD terms to integers,
-by parsing JSON-LD contexts used by a JSON-LD document. These mappings are created
-in an invertible way.
+<b>Semantic compression</b>: Dynamically creates a mapping from JSON-LD terms to integers,
+
+by parsing JSON-LD contexts used by a JSON-LD document. These mappings are created
+
+in an invertible way.
+
         </li>
         <li>
-<b>Typed-value compression (codec)</b>: Dynamically compresses typed values in an invertible
-way, based on an <i>a priori</i> understanding of the data type (e.g., removes scheme
-strings from URLs).
+<b>Typed-value compression (codec)</b>: Dynamically compresses typed values in an invertible
+
+way, based on an <i>a priori</i> understanding of the data type (e.g., removes scheme
+
+strings from URLs).
+
         </li>
         <li>
-<b>Typed-value compression (registry dictionary)</b>: Creates static dictionaries, listed in
-a CBOR-LD Registry Entry, for use-case-specific typed-value compression.
+<b>Typed-value compression (registry dictionary)</b>: Creates static dictionaries, listed in
+
+a CBOR-LD Registry Entry, for use-case-specific, typed-value compression.
+
         </li>
       </ul>
-      </p>
-      <p>
-Codecs are the basic primitive for compressing typed values in a generic way. Semantic compression
-is for compressing JSON-LD terms. Registry dictionaries are for compressing typed values in a
-use-case-specific way. Each of these is optional — CBOR-LD can be used with any, all, or none of
-these compression strategies. Taken together, the set of these strategies that is used for
-a particular use case is known as a <i>processing model</i>.
-      </p>
+    </p>
+    <p>
+Codecs are the basic primitive for compressing typed values in a generic way. Semantic compression
+is for compressing JSON-LD terms. Registry dictionaries are for compressing typed values in a
+use-case-specific way. Each of these is optional — CBOR-LD can be used with any, all, or none of
+these compression strategies. Taken together, the set of these strategies that is used for
+a particular use case is known as a <i>processing model</i>.
+
     </p>
   </section>
   <section class="informative">
@@ -458,38 +466,32 @@ a particular use case is known as a <i>processing model</i>.
       <p>
 Semantic compression is a powerful tool for creating compact CBOR-LD payloads. The core idea is
 to use the information content of external JSON-LD context objects to compress JSON-LD terms.
-These context objects are available to both the creator and the consumer of the payload,
-so this is done in an invertible way.
+These external context objects are available to both the creator and the consumer of the
+payload, so this is done in an invertible way.
     </p>
     <p>
 The general semantic compression process is to take a JSON-LD Document and do
 the following:
     </p>
     <ol>
-
       <li>
 Determine whether JSON-LD can be compressed (find `@context` values in JSON-LD document
-that reference contexts via URIs; embedded context values cannot be compressed)
-
+that reference contexts via URIs; embedded context values cannot be compressed).
       </li>
       <li>
 Process the JSON-LD contexts, building a CBOR-LD term codec map — a list
-of all terms that can be compressed. Sort the list. Associate byte values
-with each term, starting at 0 and counting up.
+of all terms that can be compressed. Sort the list (into Unicode code point order).
+Associate byte values with each term, starting at 0 and counting up.
       </li>
       <li>
-Encode the JSON-LD Document as CBOR-LD. This consists of replacing every key with
-
+Encode the JSON-LD Document into CBOR-LD. This consists of replacing every key with
 the byte value associated with the term from the term codec map.
       </li>
       <li>
-Decode the CBOR-LD bytes to JSON-LD. This consists of replacing every CBOR byte value
-
-with the associated key from the term codec map.
-
+If and when the original JSON-LD is required, decoding from CBOR-LD to JSON-LD consists
+of replacing every CBOR byte value with the associated key from the term codec map.
       </li>
     </ol>
-
   </section>
 
   <section class="normative">
@@ -497,16 +499,14 @@ with the associated key from the term codec map.
     <p>
 CBOR-LD payloads need to be identifiable as such at the binary level. CBOR natively supports
 this via its "tag" feature — a header value in the binary data that describes the rest of the
-
 payload via a global registry.
-
     </p>
     <p>
-To this end, the CBOR tag `0xCB1D` (tag value `51997`) has been registered
-at <a href="https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml">the
+The CBOR tag `0xCB1D` (tag value `51997`) has been registered
+in <a href="https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml">the
 IANA CBOR tag registry</a> to be used for CBOR-LD. The data that immediately
-follows this tag value identifies the use-case-specific registry entry (if
-any) that was used to create the compressed payload.
+follows this tag value identifies the registry entry that was used to create
+the compressed payload.
     </p>
     <p>
 CBOR-LD payloads MUST be structured such that the item tagged with tag `0xCB1D` is
@@ -521,63 +521,47 @@ in the <b>CBOR-LD Registry</b>.
     <section>
       <h2>CBOR-LD Registry</h2>
       <p>
-To enable unbounded extension on possible use cases for CBOR-LD that require different
+To enable unbounded extension of possible use cases for CBOR-LD that require different
 compression table material for consumption while working with a single
 CBOR tag value, we define the following.
       </p>
       <p>
-The <b>CBOR-LD Registry</b> is a global list that provides
-consumers of CBOR-LD payloads the information they need to reconstruct the term codec map
-required for decompression. A <b>CBOR-LD Registry Entry</b> contains the following:
+The <dfn>CBOR-LD Registry</dfn> is a global list that provides consumers of
+CBOR-LD payloads the information they need to reconstruct the term codec map required
+for decompression. A <dfn>CBOR-LD Registry Entry</dfn> contains the following:
       </p>
-        <ol>
+        <ul>
           <li>
-`Registry Entry ID`: a positive integer.
+`Registry Entry ID`: A positive integer.
           </li>
           <li>
-`Use Case`: what type of CBOR-LD payload this entry is used for.
+`Use Case`: The type of CBOR-LD payload this entry is to be used for.
           </li>
           <li>
-`typeTables`: an array containing what `Type Tables` (use-case-specific compression tables for
-compressing typed values rather than JSON-LD terms) are to be used for this registry entry.
+`typeTables`: An array containing the registry dictionaries that are to be used with this
+registry entry.
           </li>
           <li>
 `processingModel`: what processing model is used for this registry entry. A processing model
 specifies the following:
-            <ol>
+            <ul>
               <li>
 Whether or not semantic compression is used for dynamic JSON-LD term compression,
               </li>
               <li>
 What codecs are used for dynamic typed value compression.
               </li>
-            </ol>
+            </ul>
 The `default` processing model uses semantic compression and includes the codecs specified in this document.
           </li>
           <li>
-Provisional: a yes/no flag indicating whether the entry is provisional. Provisional entries
+`provisional`: a boolean indicating whether the entry is provisional. Provisional entries
 may change or be removed.
           </li>
-        </ol>
+        </ul>
       <p>
-The `typeTables` associated with a <b>CBOR-LD Registry Entry</b> MUST be an array of
-or JSON objects. The only exception is the string "callerProvidedTable", which may appear in this array,
-denoting that for this use case, a `Type Table` is required which is not globally
-defined.
-      </p>
-      <p>
-Dereferencing one of these URLs MUST result in a JSON object with the following properties:
-      </p>
-      <ol>
-        <li>
-`type`: a JSON-LD type.
-        </li>
-        <li>
-`table`: a JSON object that maps values of the above type to integers.
-        </li>
-      </ol>
-      <p>
-If a JSON object is present in the `typeTables` array, it MUST be in the above format.
+The string "callerProvidedTable", may appear in `typeTables`, denoting that for this use case, a
+`Type Table` is required which is not globally defined.
       </p>
       <section>
         <h3>Registry</h3>
