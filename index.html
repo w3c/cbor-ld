@@ -461,7 +461,7 @@ The first step in decoding a CBOR-LD payload is to recreate the term codec
 map that was used to encode it by processing the contexts in the payload. However,
 the contexts needed to create the term codec map can have their URLs encoded as integers
 by CBOR-LD. If a CBOR-LD payload contains context URLs compressed in such a way, the
-consumer of the CBOR-LD needs to know what compression tables (maps from JSON-LD terms to integers)
+consumer of the CBOR-LD needs to know what compression tables (maps from [[JSON-LD]] terms to integers)
 were used to compress the context URLs during creation to be able to reconstruct the term codec
 map. The following sections define the exact mechanism by which this can be accomplished, allowing
 an arbitrary CBOR-LD consumer to decompress any CBOR-LD payload that conforms to this specification.
@@ -509,7 +509,7 @@ type of payload.
           </li>
           <li>
 `processingModel`: what processing model is used for this registry entry. A processing model
-specifies how auto-generated CBOR-LD values are created from JSON-LD contexts as well as what
+specifies how auto-generated CBOR-LD values are created from [[JSON-LD]] contexts as well as what
 type encoders are used alongside the `Type Tables` (e.g. how to partially compress an
 `xsd:dateTime` value that does not appear in `Type Table`). The default processing model,
 which will be defined later in this specification, will be used unless otherwise specified
@@ -531,7 +531,7 @@ Dereferencing one of these URLs MUST result in a JSON object with the following 
       </p>
       <ol>
         <li>
-`type`: a JSON-LD type.
+`type`: a [[JSON-LD]] type.
         </li>
         <li>
 `table`: a JSON object that maps values of the above type to integers.
@@ -556,7 +556,7 @@ is owned by the <a href="https://www.w3.org/community/json-ld/">W3C JSON-LD Comm
   </section>
   <section class="normative">
     <h1>Algorithms</h1>
-In this section, we specify the algorithms required to convert JSON-LD to CBOR-LD
+In this section, we specify the algorithms required to convert [[JSON-LD]] to CBOR-LD
 and vice versa. We provide first the context processing algorithms, which are required
 for both decompression and compression; we then provide the mode-specific algorithms.
     <section>
@@ -564,7 +564,7 @@ for both decompression and compression; we then provide the mode-specific algori
       <section>
         <h3>JSON-LD to CBOR-LD Compression Algorithm</h3>
         <p>
-This algorithm takes a map `typeTable`, an integer `registryEntryId`, and a JSON-LD
+This algorithm takes a map `typeTable`, an integer `registryEntryId`, and a [[JSON-LD]]
 document `jsonldDocument` as inputs, and returns a hexadecimal string `cborldBytes`.
         </p>
         <ol>
@@ -606,7 +606,7 @@ Return `cborldBytes`.
       <section>
         <h3>CBOR-LD to JSON-LD Decompression Algorithm</h3>
         <p>
-This algorithm takes a CBOR-LD payload `cborldBytes`, and returns a JSON-LD document `jsonldDocument`.
+This algorithm takes a CBOR-LD payload `cborldBytes`, and returns a [[JSON-LD]] document `jsonldDocument`.
         </p>
         <ol>
           <li>
@@ -652,7 +652,7 @@ The algorithms in this section describe the behavior of a "converter" for abstra
 converting inputs between data forms. When used in conjunction with a "strategy",
 such as the "compression" and "decompression" strategies defined later in this section,
 these algorithms can be instantiated to convert between concrete data forms. The
-"compression" strategy converts from JSON-LD to CBOR-LD, while the "decompression"
+"compression" strategy converts from [[JSON-LD]] to CBOR-LD, while the "decompression"
 strategy converts from CBOR-LD to JSON-LD.
       </p>
       <section>
@@ -893,7 +893,7 @@ Return `result`.
         <p>
 The algorithms in this section define the "compression" strategy
 to be used with the "conversion" algorithms defined previously to
-convert JSON-LD to CBOR-LD.
+convert [[JSON-LD]] to CBOR-LD.
         </p>
         <section>
           <h4>Convert Contexts for Compression Algorithm</h4>
@@ -1079,7 +1079,7 @@ Return `objectTypes`.
         <p>
 The algorithms in this section define the "decompression" strategy
 to be used with the "conversion" algorithms defined previously to
-convert CBOR-LD to JSON-LD.
+convert CBOR-LD to [[JSON-LD]].
         </p>
         <section>
           <h4>Convert Contexts for Decompression Algorithm</h4>
@@ -1313,7 +1313,7 @@ Return `objectTypes`.
       <h2>Active Context Processing</h2>
         <p>
 The algorithms in this section describe how to determine
-what components of the context documents associated with a JSON-LD
+what components of the context documents associated with a [[JSON-LD]]
 document are in use at any point during compression or decompression.
 These algorithms include how to apply embedded, type-scoped, and
 property-scoped contexts with CBOR-LD. This is in contrast to the Context
@@ -1640,7 +1640,7 @@ Set `state.contextMap` to a new map.
 Set `state.nextTermId` to 100.
           </li>
           <li>
-Set `state.keywordsMap` to the following map of JSON-LD keywords to their associated
+Set `state.keywordsMap` to the following map of [[JSON-LD]] keywords to their associated
 integer values:
             <pre class="nohighlight">
 {
@@ -1860,7 +1860,7 @@ Return `result`.
     <section>
       <h2>Codecs</h2>
       <p>
-The codecs in this section specify exactly how individual values in JSON-LD should be converted to CBOR
+The codecs in this section specify exactly how individual values in [[JSON-LD]] should be converted to CBOR
 and vice versa. They are used by the algorithms in the previous section, and allow CBOR-LD to efficiently
 encode both primitive and non-primitive types as CBOR.
       </p>
