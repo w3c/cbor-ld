@@ -429,27 +429,19 @@ At a high level, CBOR-LD is a compact, binary serialization for JSON-LD that all
 the following mechanisms for additional compression:
       <ul>
         <li>
-<b>Semantic compression</b>: Dynamically creates a mapping from JSON-LD terms to integers,
-
-by parsing JSON-LD contexts used by a JSON-LD document. These mappings are created
-
-in an invertible way.
-
-        </li>
+<b>Semantic compression</b>: Dynamically creates a mapping from JSON-LD terms to integers,
+by parsing JSON-LD contexts used by a JSON-LD document. These mappings are created
+in an invertible way.
+        </li>
         <li>
-<b>Typed-value compression (codec)</b>: Dynamically compresses typed values in an invertible
-
-way, based on an <i>a priori</i> understanding of the data type (e.g., removes scheme
-
-strings from URLs).
-
-        </li>
+<b>Typed-value compression (codec)</b>: Dynamically compresses typed values in an invertible
+way, based on an <i>a priori</i> understanding of the data type (e.g., removes scheme
+strings from URLs).
+        </li>
         <li>
-<b>Typed-value compression (registry dictionary)</b>: Creates static dictionaries, listed in
-
-a CBOR-LD Registry Entry, for use-case-specific, typed-value compression.
-
-        </li>
+<b>Typed-value compression (registry dictionary)</b>: Creates static dictionaries, listed in
+a CBOR-LD Registry Entry, for use-case-specific, typed-value compression.
+        </li>
       </ul>
     </p>
     <p>
@@ -457,9 +449,8 @@ Codecs are the basic primitive for compressing typed values in a generic way. Se
 is for compressing JSON-LD terms. Registry dictionaries are for compressing typed values in a
 use-case-specific way. Each of these is optional — CBOR-LD can be used with any, all, or none of
 these compression strategies. Taken together, the set of these strategies that is used for
-a particular use case is known as a <i>processing model</i>.
-
-    </p>
+a particular use case is known as a <i>processing model</i>.
+    </p>
   </section>
   <section class="informative">
     <h1>Semantic Compression</h1>
@@ -479,17 +470,17 @@ Determine whether JSON-LD can be compressed (find `@context` values in JSON-LD d
 that reference contexts via URIs; embedded context values cannot be compressed).
       </li>
       <li>
-Process the JSON-LD contexts, building a CBOR-LD term codec map — a list
+Process the JSON-LD contexts, building a CBOR-LD term-codec map — a list
 of all terms that can be compressed. Sort the list (into Unicode code point order).
 Associate byte values with each term, starting at 0 and counting up.
       </li>
       <li>
 Encode the JSON-LD Document into CBOR-LD. This consists of replacing every key with
-the byte value associated with the term from the term codec map.
+the byte value associated with the term from the term-codec map.
       </li>
       <li>
 If and when the original JSON-LD is required, decoding from CBOR-LD to JSON-LD consists
-of replacing every CBOR byte value with the associated key from the term codec map.
+of replacing every CBOR byte value with the associated key from the term-codec map.
       </li>
     </ol>
   </section>
@@ -527,7 +518,7 @@ CBOR tag value, we define the following.
       </p>
       <p>
 The <dfn>CBOR-LD Registry</dfn> is a global list that provides consumers of
-CBOR-LD payloads the information they need to reconstruct the term codec map required
+CBOR-LD payloads the information they need to reconstruct the term-codec map required
 for decompression. A <dfn>CBOR-LD Registry Entry</dfn> contains the following:
       </p>
         <ul>
@@ -549,7 +540,7 @@ specifies the following:
 Whether or not semantic compression is used for dynamic JSON-LD term compression,
               </li>
               <li>
-What codecs are used for dynamic typed value compression.
+The codecs used for dynamic typed-value compression.
               </li>
             </ul>
 The `default` processing model uses semantic compression and includes the codecs specified in this document.
