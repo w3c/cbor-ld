@@ -1,4 +1,4 @@
-/* globals omitTerms, respecConfig, $, require */
+/* globals omitTerms, $ */
 /* JSON-LD Working Group common spec JavaScript */
 // We should be able to remove terms that are not actually
 // referenced from the common definitions
@@ -33,10 +33,7 @@ function restrictReferences(utils, content) {
   return (base.innerHTML);
 }
 
-require(["core/pubsubhub"], (respecEvents) => {
-  "use strict";
-
-  respecEvents.sub('end', (message) => {
+  function postProcess(respecConfig, document) {
     // remove data-cite on where the citation is to ourselves.
     const selfDfns = document.querySelectorAll("dfn[data-cite^='" + respecConfig.shortName.toUpperCase() + "#']");
     for (const dfn of selfDfns) {
@@ -49,16 +46,7 @@ require(["core/pubsubhub"], (respecEvents) => {
       anchor.href= anchor.dataset.cite.replace(/^.*#/,"#");
       delete anchor.dataset.cite;
     }
-  });
 
-  // add a handler to come in after all the definitions are resolved
-  //
-  // New logic: If the reference is within a 'dl' element of
-  // class 'termlist', and if the target of that reference is
-  // also within a 'dl' element of class 'termlist', then
-  // consider it an internal reference and ignore it.
-  respecEvents.sub('end', (message) => {
-    if (message === 'core/link-to-dfn') {
       // all definitions are linked; find any internal references
       const internalTerms = document.querySelectorAll(".termlist a.internalDFN");
       for (const item of internalTerms) {
@@ -134,16 +122,11 @@ require(["core/pubsubhub"], (respecEvents) => {
         //  }
         //}
       }
-    }
-  });
-});
 
 /*
 * Implement tabbed examples.
 */
-require(["core/pubsubhub"], (respecEvents) => {
-  "use strict";
-  respecEvents.sub('end-all', (documentElement) => {
+
     // Add playground links
     for (const link of document.querySelectorAll("a.playground")) {
       let pre;
@@ -206,8 +189,12 @@ require(["core/pubsubhub"], (respecEvents) => {
         .replace(/####([^#]*)####/g, '<span class="comment">$1</span>');
       pre.innerHTML = content;
     }
-  });
-});
+  }
+
+if (!respecConfig.postProcess) {
+  respecConfig.postProcess = [];
+}
+respecConfig.postProcess.push(postProcess);
 
 function _esc(s) {
   return s.replace(/&/g,'&amp;')
