@@ -2936,6 +2936,305 @@ Return <code>url</code>.
           </section>
         </section>
       </section>
+      <section>
+        <h3>XSD Date Codec</h3>
+        <p>
+The XSD Date Codec compresses values whose type is
+<code>http://www.w3.org/2001/XMLSchema#date</code>. A date value is
+represented as an integer count of seconds since the Unix epoch
+(1970-01-01T00:00:00Z), encoded as a CBOR Major Type 0 (unsigned
+integer) for non-negative values or Major Type 1 (negative integer) for
+dates before the epoch. The codec only compresses date strings that
+exactly round-trip through this representation; otherwise the original
+string is retained verbatim.
+        </p>
+
+        <aside class="note">
+The seconds-since-epoch value is computed from the date at midnight UTC
+(i.e. the instant <code>&lt;date&gt;T00:00:00Z</code>). Because time
+zone offsets or time components would make round-tripping ambiguous,
+values containing a time component (<code>'T'</code>) are not compressed
+by this codec.
+        </aside>
+
+        <section>
+          <h4>Create XSD Date Encoder</h4>
+          <p>
+This algorithm takes a string <code>value</code>, and returns an encoder
+object or <code>undefined</code>.
+          </p>
+          <ol>
+            <li>
+If <code>value</code> contains the character <code>'T'</code> (indicating
+a time component), return <code>undefined</code> (this value is
+compressed instead by the <a href="#xsd-datetime-codec">XSD DateTime
+Codec</a>).
+            </li>
+            <li>
+Set <code>parsed</code> to the result of parsing <code>value</code> as
+an ISO 8601 date string, expressed as the number of milliseconds since
+the Unix epoch.
+            </li>
+            <li>
+If <code>parsed</code> is not a valid number, return
+<code>undefined</code>.
+            </li>
+            <li>
+Return an encoder object containing <code>value</code> and
+<code>parsed</code>.
+            </li>
+          </ol>
+        </section>
+
+        <section>
+          <h4>Encode XSD Date</h4>
+          <p>
+This algorithm takes an encoder object from
+<a href="#create-xsd-date-encoder"></a>, and returns CBOR binary data.
+          </p>
+          <ol>
+            <li>
+Set <code>secondsSinceEpoch</code> to
+<code>floor(encoderData.parsed / 1000)</code>.
+            </li>
+            <li>
+Set <code>reconstituted</code> to the ISO 8601 string for the instant
+<code>secondsSinceEpoch × 1000</code> milliseconds since the Unix
+epoch.
+            </li>
+            <li>
+Set <code>expectedDate</code> to the substring of
+<code>reconstituted</code> preceding the first occurrence of
+<code>'T'</code>.
+            </li>
+            <li>
+If <code>encoderData.value</code> is not equal to
+<code>expectedDate</code>, the compression would be lossy. Return a CBOR
+encoding of <code>encoderData.value</code> as a Major Type 3 (text
+string) object.
+            </li>
+            <li>
+If <code>secondsSinceEpoch</code> is greater than or equal to
+<code>0</code>, return a CBOR encoding of
+<code>secondsSinceEpoch</code> as a Major Type 0 (unsigned integer)
+object.
+            </li>
+            <li>
+Otherwise, return a CBOR encoding of <code>secondsSinceEpoch</code>
+as a Major Type 1 (negative integer) object.
+            </li>
+          </ol>
+        </section>
+
+        <section>
+          <h4>Create XSD Date Decoder</h4>
+          <p>
+This algorithm takes a value <code>valueToDecode</code>, and returns a
+decoder object or <code>undefined</code>.
+          </p>
+          <ol>
+            <li>
+If <code>valueToDecode</code> is an integer (positive, negative, or
+zero), return a decoder object.
+            </li>
+            <li>
+Otherwise, return <code>undefined</code>.
+            </li>
+          </ol>
+        </section>
+
+        <section>
+          <h4>Decode XSD Date</h4>
+          <p>
+This algorithm takes a decoder object and an integer value
+<code>value</code>, and returns a string.
+          </p>
+          <ol>
+            <li>
+Set <code>dateString</code> to the ISO 8601 string for the instant
+<code>value * 1000</code> milliseconds since the Unix epoch.
+            </li>
+            <li>
+Return the substring of <code>dateString</code> preceding the first
+occurrence of <code>'T'</code>.
+            </li>
+          </ol>
+        </section>
+      </section>
+      <section>
+        <h3>XSD DateTime Codec</h3>
+        <p>
+The XSD DateTime Codec compresses values whose type is
+<code>http://www.w3.org/2001/XMLSchema#dateTime</code>. Second-precision
+datetime values are encoded as a single integer count of seconds since
+the Unix epoch (Major Type 0 or 1). Sub-second-precision datetime values
+are encoded as a two-element CBOR array <code>[seconds,
+milliseconds]</code>, both as Major Type 0 integers. As with the XSD
+Date Codec, the value is only compressed if the compression is lossless
+(the original string round-trips through the encoding exactly).
+        </p>
+
+        <section>
+          <h4>Create XSD DateTime Encoder</h4>
+          <p>
+This algorithm takes a string <code>value</code>, and returns an encoder
+object or <code>undefined</code>.
+          </p>
+          <ol>
+            <li>
+If <code>value</code> does not contain the character <code>'T'</code>,
+return <code>undefined</code> (this value is compressed instead by the
+<a href="#xsd-date-codec">XSD Date Codec</a>).
+            </li>
+            <li>
+Set <code>parsed</code> to the result of parsing <code>value</code> as an
+ISO 8601 datetime string, expressed as the number of milliseconds since
+the Unix epoch.
+            </li>
+            <li>
+If <code>parsed</code> is not a valid number, return
+<code>undefined</code>.
+            </li>
+            <li>
+Return an encoder object containing <code>value</code> and
+<code>parsed</code>.
+            </li>
+          </ol>
+        </section>
+
+        <section>
+          <h4>Encode XSD DateTime</h4>
+          <p>
+This algorithm takes an encoder object from
+<a href="#create-xsd-datetime-encoder"></a>, and returns CBOR binary
+data.
+          </p>
+          <ol>
+            <li>
+Set <code>secondsSinceEpoch</code> to
+<code>floor(encoderData.parsed / 1000)</code>.
+            </li>
+            <li>
+If <code>encoderData.value</code> does not contain the character
+<code>'.'</code> (no millisecond component):
+              <ol>
+                <li>
+Set <code>expectedDate</code> to the ISO 8601 string for the instant
+<code>secondsSinceEpoch * 1000</code> milliseconds since the Unix
+epoch, with the substring <code>".000Z"</code> replaced by
+<code>"Z"</code>.
+                </li>
+                <li>
+If <code>encoderData.value</code> is not equal to
+<code>expectedDate</code>, the compression would be lossy. Return a
+CBOR encoding of <code>encoderData.value</code> as a Major Type 3
+(text string) object.
+                </li>
+                <li>
+If <code>secondsSinceEpoch</code> is greater than or equal to
+<code>0</code>, return a CBOR encoding of
+<code>secondsSinceEpoch</code> as a Major Type 0 (unsigned integer)
+object.
+                </li>
+                <li>
+Otherwise, return a CBOR encoding of <code>secondsSinceEpoch</code> as
+a Major Type 1 (negative integer) object.
+                </li>
+              </ol>
+            </li>
+            <li>
+Otherwise (millisecond component is present):
+              <ol>
+                <li>
+Set <code>millisecondIndex</code> to the index of the first
+<code>'.'</code> in <code>encoderData.value</code>.
+                </li>
+                <li>
+Set <code>milliseconds</code> to the integer value of the digits of
+<code>encoderData.value</code> beginning at position
+<code>millisecondIndex + 1</code>.
+                </li>
+                <li>
+Set <code>expectedDate</code> to the ISO 8601 string for the instant
+<code>secondsSinceEpoch * 1000 + milliseconds</code> milliseconds
+since the Unix epoch.
+                </li>
+                <li>
+If <code>encoderData.value</code> is not equal to
+<code>expectedDate</code>, the compression would be lossy. Return a
+CBOR encoding of <code>encoderData.value</code> as a Major Type 3
+(text string) object.
+                </li>
+                <li>
+Return a CBOR encoding of the two-element array
+<code>[secondsSinceEpoch, milliseconds]</code>: Major Type 4 (array)
+containing two Major Type 0 (unsigned integer) items.
+                </li>
+              </ol>
+            </li>
+          </ol>
+        </section>
+
+        <section>
+          <h4>Create XSD DateTime Decoder</h4>
+          <p>
+This algorithm takes a value <code>valueToDecode</code>, and returns a
+decoder object or <code>undefined</code>.
+          </p>
+          <ol>
+            <li>
+If <code>valueToDecode</code> is an integer, return a decoder object.
+            </li>
+            <li>
+If <code>valueToDecode</code> is an array of exactly two elements where
+both elements are numbers, return a decoder object.
+            </li>
+            <li>
+Otherwise, return <code>undefined</code>.
+            </li>
+          </ol>
+        </section>
+
+        <section>
+          <h4>Decode XSD DateTime</h4>
+          <p>
+This algorithm takes a decoder object and a value <code>value</code>
+(either an integer or a two-element array of integers), and returns a
+string.
+          </p>
+          <ol>
+            <li>
+If <code>value</code> is an integer:
+              <ol>
+                <li>
+Set <code>instantMs</code> to <code>value * 1000</code>.
+                </li>
+                <li>
+Set <code>dateString</code> to the ISO 8601 string for the instant
+<code>instantMs</code> milliseconds since the Unix epoch.
+                </li>
+                <li>
+Return <code>dateString</code> with the substring <code>".000Z"</code>
+replaced by <code>"Z"</code>.
+                </li>
+              </ol>
+            </li>
+            <li>
+Otherwise (<code>value</code> is a two-element array):
+              <ol>
+                <li>
+Set <code>instantMs</code> to
+<code>value[0] * 1000 + value[1]</code>.
+                </li>
+                <li>
+Return the ISO 8601 string for the instant <code>instantMs</code>
+milliseconds since the Unix epoch.
+                </li>
+              </ol>
+            </li>
+          </ol>
+        </section>
+      </section>
     </section>
 
     <section>
