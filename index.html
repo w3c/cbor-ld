@@ -2193,6 +2193,749 @@ Return `decoderData`.`decoded`.
           </ol>
         </section>
       </section>
+      <section>
+        <h3>URL Codec</h3>
+        <p>
+The URL Codec compresses URL values based on the scheme of the value.
+URLs are encoded as arrays, where the first integer denotes the scheme
+of the URL. The codec first checks whether the value matches a known
+JSON-LD term identifier, encoding it as a simple integer if so. Otherwise
+it delegates to one of the following URI-scheme-specific sub-codecs based
+on the URI scheme of the value.
+        </p>
+
+        <section>
+          <h4>URL Scheme Table</h4>
+          <p>
+The <dfn>URL Scheme Table</dfn> maps URI scheme prefixes to their
+associated compressed integer identifiers. Implementations that use the URL
+codec MUST use the following table. The <dfn>URL Scheme Reverse Table</dfn> is the
+inversion of this table (i.e. a map from integer to scheme prefix string).
+          </p>
+          <table class="simple">
+            <thead>
+              <tr><th>URI Scheme Prefix</th><th>Integer Identifier</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>http://</code></td><td>1</td></tr>
+              <tr><td><code>https://</code></td><td>2</td></tr>
+              <tr><td><code>urn:uuid:</code></td><td>3</td></tr>
+              <tr><td><code>data:</code></td><td>4</td></tr>
+              <tr><td><code>did:v1:nym:</code></td><td>1024</td></tr>
+              <tr><td><code>did:key:</code></td><td>1025</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section>
+          <h4>Create URL Encoder</h4>
+          <p>
+This algorithm takes maps <code>state</code>, <code>termInfo</code>, and a
+string <code>valueToEncode</code>, and returns an encoder object or
+<code>undefined</code>.
+          </p>
+          <ol>
+            <li>
+If <code>valueToEncode</code> is not a string, throw an
+<code>ERR_UNSUPPORTED_JSON_TYPE</code> error.
+            </li>
+            <li>
+Set <code>termId</code> to the result of looking up
+<code>valueToEncode</code> in <code>state.termToId</code>.
+            </li>
+            <li>
+If <code>termId</code> is an integer, return an encoder that, when
+invoked via <a href="#encode-url"></a>, encodes <code>termId</code> as
+a Major Type 0 (unsigned integer) CBOR item.
+            </li>
+            <li>
+Attempt to parse the URI scheme from <code>valueToEncode</code>.
+If parsing fails (the value is not a valid URI), return
+<code>undefined</code>.
+            </li>
+            <li>
+Set <code>scheme</code> to the longest matching prefix of
+<code>valueToEncode</code> that appears in the <a>URL Scheme Table</a>.
+            </li>
+            <li>
+If <code>scheme</code> starts with <code>"https"</code> or
+<code>"http"</code>, return the result of
+<a href="#create-http-url-encoder"></a> passing
+<code>valueToEncode</code> and <code>scheme</code>.
+            </li>
+            <li>
+If <code>scheme</code> is <code>"urn:uuid"</code>, return the result of
+<a href="#create-uuid-urn-encoder"></a> passing
+<code>valueToEncode</code>.
+            </li>
+            <li>
+If <code>scheme</code> is <code>"data"</code>, return the result of
+<a href="#create-data-url-encoder"></a> passing
+<code>valueToEncode</code>.
+            </li>
+            <li>
+If <code>scheme</code> is <code>"did:v1:nym"</code> or
+<code>"did:key"</code>, return the result of
+<a href="#create-base58-did-url-encoder"></a> passing
+<code>valueToEncode</code> and <code>scheme</code>.
+            </li>
+            <li>
+Return <code>undefined</code> (no compression possible for this URI).
+            </li>
+          </ol>
+        </section>
+
+        <section id="encode-url">
+          <h4>Encode URL</h4>
+          <p>
+This algorithm takes an encoder object produced by
+<a href="#create-url-encoder"></a>, and returns CBOR binary data.
+          </p>
+          <ol>
+            <li>
+If the encoder was created for a term-ID match (step 3 of
+<a href="#create-url-encoder"></a>), return a CBOR encoding of
+<code>termId</code> as a Major Type 0 (unsigned integer) object.
+            </li>
+            <li>
+Otherwise, invoke the <code>encode</code> method of the appropriate
+URI-scheme sub-encoder and return the resulting CBOR binary data.
+            </li>
+          </ol>
+        </section>
+
+        <section>
+          <h4>Create URL Decoder</h4>
+          <p>
+This algorithm takes maps <code>state</code>, <code>termInfo</code>, and a
+value <code>valueToDecode</code>, and returns a decoder object or
+<code>undefined</code>.
+          </p>
+          <ol>
+            <li>
+If <code>valueToDecode</code> is a string, return <code>undefined</code>
+(value is already an uncompressed URL string; pass through).
+            </li>
+            <li>
+If <code>valueToDecode</code> is an array:
+              <ol>
+                <li>
+Set <code>schemeId</code> to the first element of
+<code>valueToDecode</code>.
+                </li>
+                <li>
+Set <code>scheme</code> to the value of <code>schemeId</code> in the
+<a>URL Scheme Reverse Table</a>.
+                </li>
+                <li>
+If <code>scheme</code> is <code>"http://"</code> or
+<code>"https://"</code>, return the result of
+<a href="#create-http-url-decoder"></a> passing
+<code>valueToDecode</code>.
+                </li>
+                <li>
+If <code>scheme</code> is <code>"urn:uuid:"</code>, return the result of
+<a href="#create-uuid-urn-decoder"></a> passing
+<code>valueToDecode</code>.
+                </li>
+                <li>
+If <code>scheme</code> is <code>"data:"</code>, return the result of
+<a href="#create-data-url-decoder"></a> passing
+<code>valueToDecode</code>.
+                </li>
+                <li>
+If <code>scheme</code> is <code>"did:v1:nym:"</code> or
+<code>"did:key:"</code>, return the result of
+<a href="#create-base58-did-url-decoder"></a> passing
+<code>valueToDecode</code>.
+                </li>
+                <li>
+Otherwise, throw an <code>ERR_UNKNOWN_COMPRESSED_VALUE</code> error.
+                </li>
+              </ol>
+            </li>
+            <li>
+If <code>valueToDecode</code> is an integer, set <code>term</code> to the
+result of looking up <code>valueToDecode</code> in
+<code>state.idToTerm</code> and return a decoder whose
+<a href="#decode-url"></a> invocation returns <code>term</code>.
+            </li>
+            <li>
+Return <code>undefined</code>.
+            </li>
+          </ol>
+        </section>
+
+        <section id="decode-url">
+          <h4>Decode URL</h4>
+          <p>
+This algorithm takes a decoder object produced by
+<a href="#create-url-decoder"></a>, and returns a string value.
+          </p>
+          <ol>
+            <li>
+If the decoder was created for an integer term-ID value (step 3 of
+<a href="#create-url-decoder"></a>), return the associated
+<code>term</code> string.
+            </li>
+            <li>
+Otherwise, invoke the <code>decode</code> method of the appropriate
+URI-scheme sub-decoder and return the resulting string.
+            </li>
+          </ol>
+        </section>
+
+        <!-- HTTP URL sub-codec -->
+        <section>
+          <h4>HTTP URL Codec</h4>
+          <p>
+The HTTP URL Codec handles values whose URI scheme is
+<code>http://</code> or <code>https://</code>. An encoded HTTP URL is
+represented as a two-element CBOR array
+<code>[schemeId, remainder]</code> where <code>schemeId</code> is the
+integer from the <a>URL Scheme Table</a> and <code>remainder</code> is
+the scheme-stripped portion of the URL as a text string.
+          </p>
+
+          <section id="create-http-url-encoder">
+            <h5>Create HTTP URL Encoder</h5>
+            <p>
+This algorithm takes a string <code>value</code> and a string
+<code>scheme</code> (either <code>"https://"</code> or
+<code>"http://"</code>), and returns an encoder object or
+<code>undefined</code>.
+            </p>
+            <ol>
+              <li>
+If <code>value</code> starts with <code>"https://"</code>, set
+<code>scheme</code> to <code>"https://"</code>.
+              </li>
+              <li>
+Otherwise, if <code>value</code> starts with <code>"http://"</code>, set
+<code>scheme</code> to <code>"http://"</code>.
+              </li>
+              <li>
+Otherwise, return <code>undefined</code>.
+              </li>
+              <li>
+Return an encoder object containing <code>value</code> and
+<code>scheme</code>.
+              </li>
+            </ol>
+          </section>
+
+          <section>
+            <h5>Encode HTTP URL</h5>
+            <p>
+This algorithm takes an encoder object from
+<a href="#create-http-url-encoder"></a>, and returns CBOR binary data.
+            </p>
+            <ol>
+              <li>
+Set <code>schemeId</code> to the value of <code>encoderData.scheme</code>
+in the <a>URL Scheme Table</a>.
+              </li>
+              <li>
+Set <code>rest</code> to the substring of <code>encoderData.value</code>
+beginning after <code>encoderData.scheme</code>.
+              </li>
+              <li>
+Return a CBOR encoding of a two-element array
+<code>[schemeId, rest]</code>: Major Type 4 (array) containing a
+Major Type 0 (unsigned integer) item followed by a Major Type 3
+(text string) item.
+              </li>
+            </ol>
+          </section>
+
+          <section id="create-http-url-decoder">
+            <h5>Create HTTP URL Decoder</h5>
+            <p>
+This algorithm takes a CBOR array <code>valueToDecode</code>, and
+returns a decoder object or <code>undefined</code>.
+            </p>
+            <ol>
+              <li>
+If <code>valueToDecode</code> has exactly two elements and the second
+element is a text string:
+                <ol>
+                  <li>
+Set <code>scheme</code> to the value of <code>valueToDecode[0]</code>
+in the <a>URL Scheme Reverse Table</a>.
+                  </li>
+                  <li>
+Return a decoder object containing <code>scheme</code>.
+                  </li>
+                </ol>
+              </li>
+              <li>
+Otherwise, return <code>undefined</code>.
+              </li>
+            </ol>
+          </section>
+
+          <section>
+            <h5>Decode HTTP URL</h5>
+            <p>
+This algorithm takes a decoder object from
+<a href="#create-http-url-decoder"></a> and a CBOR array
+<code>valueToDecode</code>, and returns a string.
+            </p>
+            <ol>
+              <li>
+Return the concatenation of <code>decoderData.scheme</code> and
+<code>valueToDecode[1]</code>.
+              </li>
+            </ol>
+          </section>
+        </section>
+
+        <!-- UUID URN sub-codec -->
+        <section>
+          <h4>UUID URN Codec</h4>
+          <p>
+The UUID URN Codec handles values whose URI scheme is
+<code>urn:uuid:</code>. An encoded UUID URN is a two-element CBOR array
+<code>[3, uuidValue]</code> where <code>uuidValue</code> is either a
+16-byte Major Type 2 (byte string) representing the UUID in binary form
+(when the UUID string is all lowercase), or a Major Type 3 (text string)
+containing the UUID value verbatim (when the casing cannot be
+round-tripped through binary form).
+          </p>
+
+          <section>
+            <h5>Create UUID URN Encoder</h5>
+            <p>
+This algorithm takes a string <code>value</code>, and returns an encoder
+object or <code>undefined</code>.
+            </p>
+            <ol>
+              <li>
+If <code>value</code> does not start with <code>"urn:uuid:"</code>,
+return <code>undefined</code>.
+              </li>
+              <li>
+Return an encoder object containing <code>value</code>.
+              </li>
+            </ol>
+          </section>
+
+          <section>
+            <h5>Encode UUID URN</h5>
+            <p>
+This algorithm takes an encoder object, and returns CBOR binary data.
+            </p>
+            <ol>
+              <li>
+Set <code>schemeId</code> to <code>3</code> (the entry for
+<code>"urn:uuid:"</code> in the <a>URL Scheme Table</a>).
+              </li>
+              <li>
+Set <code>rest</code> to the substring of <code>encoderData.value</code>
+beginning after <code>"urn:uuid:"</code>.
+              </li>
+              <li>
+If <code>rest</code> is entirely lowercase:
+                <ol>
+                  <li>
+Set <code>uuidBytes</code> to the 16-byte binary representation of the
+UUID obtained by parsing <code>rest</code> according to
+[[RFC4122]].
+                  </li>
+                  <li>
+Return a CBOR encoding of a two-element array
+<code>[3, uuidBytes]</code>: Major Type 4 (array) containing a
+Major Type 0 (unsigned integer) item followed by a Major Type 2
+(byte string) item of length 16.
+                  </li>
+                </ol>
+              </li>
+              <li>
+Otherwise, return a CBOR encoding of a two-element array
+<code>[3, rest]</code>: Major Type 4 (array) containing a
+Major Type 0 (unsigned integer) item followed by a Major Type 3
+(text string) item.
+              </li>
+            </ol>
+          </section>
+
+          <section id="create-uuid-urn-decoder">
+            <h5>Create UUID URN Decoder</h5>
+            <p>
+This algorithm takes a CBOR array <code>valueToDecode</code>, and returns
+a decoder object or <code>undefined</code>.
+            </p>
+            <ol>
+              <li>
+If <code>valueToDecode</code> has exactly two elements, and the second
+element is either a byte string or a text string, return a decoder object.
+              </li>
+              <li>
+Otherwise, return <code>undefined</code>.
+              </li>
+            </ol>
+          </section>
+
+          <section>
+            <h5>Decode UUID URN</h5>
+            <p>
+This algorithm takes a decoder object and a CBOR array
+<code>valueToDecode</code>, and returns a string.
+            </p>
+            <ol>
+              <li>
+If <code>valueToDecode[1]</code> is a text string, set <code>uuid</code>
+to <code>valueToDecode[1]</code>.
+              </li>
+              <li>
+Otherwise, set <code>uuid</code> to the UUID string representation of the
+16-byte binary value <code>valueToDecode[1]</code> per [[RFC4122]]
+(lowercase, hyphen-delimited form).
+              </li>
+              <li>
+Return the concatenation of <code>"urn:uuid:"</code> and
+<code>uuid</code>.
+              </li>
+            </ol>
+          </section>
+        </section>
+
+        <!-- Data URL sub-codec -->
+        <section>
+          <h4>Data URL Codec</h4>
+          <p>
+The Data URL Codec handles values whose URI scheme is
+<code>data:</code>, as defined in [[RFC2397]]. Base64-encoded data URLs
+(matching <code>data:&lt;mediatype&gt;;base64,&lt;data&gt;</code>) are
+encoded as a three-element CBOR array
+<code>[4, mediatype, dataBytes]</code>. Non-base64 data URLs are encoded
+as a two-element CBOR array <code>[4, rest]</code> where
+<code>rest</code> is the portion of the URL after <code>"data:"</code>.
+          </p>
+
+          <section id="create-data-url-encoder">
+            <h5>Create Data URL Encoder</h5>
+            <p>
+This algorithm takes a string <code>value</code>, and returns an encoder
+object or <code>undefined</code>.
+            </p>
+            <ol>
+              <li>
+If <code>value</code> does not start with <code>"data:"</code>, return
+<code>undefined</code>.
+              </li>
+              <li>
+Attempt to match <code>value</code> against the pattern
+<code>data:(?&lt;mediatype&gt;.*);base64,(?&lt;data&gt;.*)</code>.
+              </li>
+              <li>
+If the match succeeds:
+                <ol>
+                  <li>
+Set <code>data</code> to the value of the <code>data</code> capture
+group.
+                  </li>
+                  <li>
+Verify round-trip integrity: decode <code>data</code> from base64 and
+re-encode to base64. If the result equals <code>data</code>, return an
+encoder object with <code>value</code> and <code>base64</code> set to
+<code>true</code>.
+                  </li>
+                </ol>
+              </li>
+              <li>
+Return an encoder object with <code>value</code> and <code>base64</code>
+set to <code>false</code>.
+              </li>
+            </ol>
+          </section>
+
+          <section>
+            <h5>Encode Data URL</h5>
+            <p>
+This algorithm takes an encoder object from
+<a href="#create-data-url-encoder"></a>, and returns CBOR binary data.
+            </p>
+            <ol>
+              <li>
+Set <code>schemeId</code> to <code>4</code> (the entry for
+<code>"data:"</code> in the <a>URL Scheme Table</a>).
+              </li>
+              <li>
+If <code>encoderData.base64</code> is <code>true</code>:
+                <ol>
+                  <li>
+Parse <code>encoderData.value</code> to extract <code>mediatype</code>
+(the substring between <code>"data:"</code> and <code>";base64,"</code>)
+and <code>dataBytes</code> (the binary decoding of the base64 data
+portion).
+                  </li>
+                  <li>
+Return a CBOR encoding of a three-element array
+<code>[schemeId, mediatype, dataBytes]</code>: Major Type 4 (array)
+containing a Major Type 0 integer, a Major Type 3 text string, and a
+Major Type 2 byte string.
+                  </li>
+                </ol>
+              </li>
+              <li>
+Otherwise:
+                <ol>
+                  <li>
+Set <code>rest</code> to the substring of <code>encoderData.value</code>
+beginning after <code>"data:"</code>.
+                  </li>
+                  <li>
+Return a CBOR encoding of a two-element array
+<code>[schemeId, rest]</code>: Major Type 4 (array) containing a
+Major Type 0 integer and a Major Type 3 text string.
+                  </li>
+                </ol>
+              </li>
+            </ol>
+          </section>
+
+          <section id="create-data-url-decoder">
+            <h5>Create Data URL Decoder</h5>
+            <p>
+This algorithm takes a CBOR array <code>valueToDecode</code>, and returns
+a decoder object or <code>undefined</code>.
+            </p>
+            <ol>
+              <li>
+If <code>valueToDecode</code> has exactly three elements, the second
+element is a text string, and the third element is a byte string, return
+a decoder object (base64 mode).
+              </li>
+              <li>
+Otherwise, if <code>valueToDecode</code> has exactly two elements and
+the second element is a text string, return a decoder object
+(non-base64 mode).
+              </li>
+              <li>
+Otherwise, return <code>undefined</code>.
+              </li>
+            </ol>
+          </section>
+
+          <section>
+            <h5>Decode Data URL</h5>
+            <p>
+This algorithm takes a decoder object and a CBOR array
+<code>valueToDecode</code>, and returns a string.
+            </p>
+            <ol>
+              <li>
+If <code>valueToDecode</code> has three elements (base64 mode):
+                <ol>
+                  <li>
+Set <code>mediatype</code> to <code>valueToDecode[1]</code>.
+                  </li>
+                  <li>
+Set <code>encodedData</code> to the base64 encoding of the byte string
+<code>valueToDecode[2]</code>.
+                  </li>
+                  <li>
+Return the concatenation of <code>"data:"</code>,
+<code>mediatype</code>, <code>";base64,"</code>, and
+<code>encodedData</code>.
+                  </li>
+                </ol>
+              </li>
+              <li>
+Otherwise (non-base64 mode), return the concatenation of
+<code>"data:"</code> and <code>valueToDecode[1]</code>.
+              </li>
+            </ol>
+          </section>
+        </section>
+
+        <!-- Base58 DID URL sub-codec -->
+        <section>
+          <h4>Base58 DID URL Codec</h4>
+          <p>
+The Base58 DID URL Codec handles DID URLs using the
+<code>did:v1:nym:</code> and <code>did:key:</code> schemes, whose
+authority (and optional fragment) components are typically multibase
+base58btc-encoded strings (those starting with the character
+<code>'z'</code>). A compressed DID URL is encoded as a two- or
+three-element CBOR array <code>[schemeId, authority]</code> or
+<code>[schemeId, authority, fragment]</code>. When a component starts
+with <code>'z'</code> and is valid base58btc, it is stored as a raw byte
+string; otherwise it is stored as a text string.
+          </p>
+
+          <aside class="note">
+The DID URL Scheme Table entries used by this codec are
+<code>did:v1:nym:</code> → <code>1024</code> and
+<code>did:key:</code> → <code>1025</code>.
+          </aside>
+
+          <section id="create-base58-did-url-encoder">
+            <h5>Create Base58 DID URL Encoder</h5>
+            <p>
+This algorithm takes a string <code>value</code> and a string
+<code>scheme</code>, and returns an encoder object or
+<code>undefined</code>.
+            </p>
+            <ol>
+              <li>
+For each <code>[scheme, schemeId]</code> pair in the
+<a>URL Scheme Table</a> where the scheme starts with
+<code>"did:"</code>:
+                <ol>
+                  <li>
+If <code>value</code> starts with <code>scheme</code>, return an encoder
+object containing <code>value</code>, <code>scheme</code>, and
+<code>schemeId</code>.
+                  </li>
+                </ol>
+              </li>
+              <li>
+Return <code>undefined</code>.
+              </li>
+            </ol>
+          </section>
+
+          <section>
+            <h5>Encode Base58 DID URL</h5>
+            <p>
+This algorithm takes an encoder object from
+<a href="#create-base58-did-url-encoder"></a>, and returns CBOR binary
+data.
+            </p>
+            <ol>
+              <li>
+Set <code>suffix</code> to the substring of <code>encoderData.value</code>
+beginning after <code>encoderData.scheme</code>.
+              </li>
+              <li>
+Split <code>suffix</code> on the first occurrence of <code>'#'</code>
+to produce <code>authority</code> and, if present,
+<code>fragment</code>.
+              </li>
+              <li>
+Set <code>authorityEncoded</code> to the result of applying the
+<a>Multibase Base58 to CBOR Token</a> algorithm to
+<code>authority</code>.
+              </li>
+              <li>
+Initialize <code>entries</code> to
+<code>[encoderData.schemeId, authorityEncoded]</code>.
+              </li>
+              <li>
+If <code>fragment</code> is defined:
+                <ol>
+                  <li>
+Set <code>fragmentEncoded</code> to the result of applying the
+<a>Multibase Base58 to CBOR Token</a> algorithm to
+<code>fragment</code>.
+                  </li>
+                  <li>
+Append <code>fragmentEncoded</code> to <code>entries</code>.
+                  </li>
+                </ol>
+              </li>
+              <li>
+Return a CBOR encoding of <code>entries</code> as a Major Type 4
+(array).
+              </li>
+            </ol>
+          </section>
+
+          <section>
+            <h5>Multibase Base58 to CBOR Token</h5>
+            <p>
+The <dfn>Multibase Base58 to CBOR Token</dfn> algorithm takes a string
+<code>str</code> and returns either a Major Type 2 (byte string) CBOR
+token (if the value is a base58btc multibase string) or a Major Type 3
+(text string) CBOR token.
+            </p>
+            <ol>
+              <li>
+If <code>str</code> starts with <code>'z'</code>:
+                <ol>
+                  <li>
+Set <code>decoded</code> to the result of decoding the base58btc content
+of <code>str</code> (i.e. <code>str[1:]</code>).
+                  </li>
+                  <li>
+If decoding succeeds, return a Major Type 2 (byte string) CBOR token
+for <code>decoded</code>.
+                  </li>
+                </ol>
+              </li>
+              <li>
+Return a Major Type 3 (text string) CBOR token for <code>str</code>.
+              </li>
+            </ol>
+          </section>
+
+          <section id="create-base58-did-url-decoder">
+            <h5>Create Base58 DID URL Decoder</h5>
+            <p>
+This algorithm takes a CBOR array <code>valueToDecode</code>, and returns
+a decoder object or <code>undefined</code>.
+            </p>
+            <ol>
+              <li>
+If <code>valueToDecode</code> has exactly two or three elements:
+                <ol>
+                  <li>
+Set <code>prefix</code> to the value of <code>valueToDecode[0]</code>
+in the <a>URL Scheme Reverse Table</a>.
+                  </li>
+                  <li>
+Return a decoder object containing <code>prefix</code>.
+                  </li>
+                </ol>
+              </li>
+              <li>
+Otherwise, return <code>undefined</code>.
+              </li>
+            </ol>
+          </section>
+
+          <section>
+            <h5>Decode Base58 DID URL</h5>
+            <p>
+This algorithm takes a decoder object from
+<a href="#create-base58-did-url-decoder"></a> and a CBOR array
+<code>valueToDecode</code>, and returns a string.
+            </p>
+            <ol>
+              <li>
+Set <code>url</code> to <code>decoderData.prefix</code>.
+              </li>
+              <li>
+If <code>valueToDecode[1]</code> is a byte string, append
+<code>'z'</code> followed by the base58btc encoding of
+<code>valueToDecode[1]</code> to <code>url</code>.
+              </li>
+              <li>
+Otherwise, append <code>valueToDecode[1]</code> to <code>url</code>.
+              </li>
+              <li>
+If <code>valueToDecode</code> has more than two elements:
+                <ol>
+                  <li>
+If <code>valueToDecode[2]</code> is a byte string, append
+<code>"#z"</code> followed by the base58btc encoding of
+<code>valueToDecode[2]</code> to <code>url</code>.
+                  </li>
+                  <li>
+Otherwise, append <code>"#"</code> followed by
+<code>valueToDecode[2]</code> to <code>url</code>.
+                  </li>
+                </ol>
+              </li>
+              <li>
+Return <code>url</code>.
+              </li>
+            </ol>
+          </section>
+        </section>
+      </section>
     </section>
 
     <section>
