@@ -3227,10 +3227,187 @@ Set <code>instantMs</code> to
 <code>value[0] * 1000 + value[1]</code>.
                 </li>
                 <li>
-Return the ISO 8601 string for the instant <code>instantMs</code>
-milliseconds since the Unix epoch.
+Return <code>instantMs</code>.
                 </li>
               </ol>
+            </li>
+          </ol>
+        </section>
+      </section>
+      <section>
+        <h3>Multibase Codec</h3>
+        <p>
+The Multibase Codec compresses values whose type is
+<code>https://w3id.org/security#multibase</code>. A multibase-encoded
+string is converted to a raw byte string whose first byte is the
+<a>Multibase Prefix Byte</a> and whose remaining bytes are the decoded
+binary payload. This allows the binary payload to be stored compactly
+without the overhead of the base-encoding characters.
+        </p>
+        <p>
+The following multibase encodings are supported:
+        </p>
+        <table class="simple">
+          <thead>
+            <tr>
+              <th>Multibase Prefix Character</th>
+              <th><dfn>Multibase Prefix Byte</dfn></th>
+              <th>Encoding</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>z</code></td>
+              <td><code>0x7a</code></td>
+              <td>Base58btc</td>
+            </tr>
+            <tr>
+              <td><code>u</code></td>
+              <td><code>0x75</code></td>
+              <td>Base64url (no padding)</td>
+            </tr>
+            <tr>
+              <td><code>M</code></td>
+              <td><code>0x4d</code></td>
+              <td>Base64pad</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <section>
+          <h4>Create Multibase Encoder</h4>
+          <p>
+This algorithm takes a value <code>value</code>, and returns an encoder
+object or <code>undefined</code>.
+          </p>
+          <ol>
+            <li>
+If <code>value</code> is not a string, return <code>undefined</code>.
+            </li>
+            <li>
+If the first character of <code>value</code> is <code>'z'</code>,
+<code>'u'</code>, or <code>'M'</code>, return an encoder object
+containing <code>value</code>.
+            </li>
+            <li>
+Otherwise, return <code>undefined</code> (unsupported multibase
+encoding).
+            </li>
+          </ol>
+        </section>
+
+        <section>
+          <h4>Encode Multibase</h4>
+          <p>
+This algorithm takes an encoder object from
+<a href="#create-multibase-encoder"></a>, and returns CBOR binary data.
+          </p>
+          <ol>
+            <li>
+Set <code>prefixChar</code> to the first character of
+<code>encoderData.value</code>.
+            </li>
+            <li>
+Set <code>prefixByte</code> to the <a>Multibase Prefix Byte</a>
+corresponding to <code>prefixChar</code>.
+            </li>
+            <li>
+Set <code>content</code> to the substring of
+<code>encoderData.value</code> beginning after the first character.
+            </li>
+            <li>
+If <code>prefixChar</code> is <code>'z'</code>, set
+<code>suffixBytes</code> to the base58btc decoding of
+<code>content</code>.
+            </li>
+            <li>
+Otherwise, if <code>prefixChar</code> is <code>'u'</code>, set
+<code>suffixBytes</code> to the base64url decoding of
+<code>content</code>.
+            </li>
+            <li>
+Otherwise (<code>prefixChar</code> is <code>'M'</code>), set
+<code>suffixBytes</code> to the base64pad decoding of
+<code>content</code>.
+            </li>
+            <li>
+Set <code>bytes</code> to a byte array of length
+<code>1 + length(suffixBytes)</code>, with the first byte set to
+<code>prefixByte</code> and the remaining bytes set to
+<code>suffixBytes</code>.
+            </li>
+            <li>
+Return a CBOR encoding of <code>bytes</code> as a Major Type 2 (byte
+string) object.
+            </li>
+          </ol>
+        </section>
+
+        <section>
+          <h4>Create Multibase Decoder</h4>
+          <p>
+This algorithm takes a value <code>valueToDecode</code>, and returns a
+decoder object or <code>undefined</code>.
+          </p>
+          <ol>
+            <li>
+If <code>valueToDecode</code> is not a byte string, return
+<code>undefined</code>.
+            </li>
+            <li>
+If the first byte of <code>valueToDecode</code> is <code>0x7a</code>,
+<code>0x75</code>, or <code>0x4d</code>, return a decoder object.
+            </li>
+            <li>
+Otherwise, return <code>undefined</code> (unsupported multibase
+prefix byte).
+            </li>
+          </ol>
+        </section>
+
+        <section>
+          <h4>Decode Multibase</h4>
+          <p>
+This algorithm takes a decoder object and a byte string
+<code>value</code>, and returns a string.
+          </p>
+          <ol>
+            <li>
+Set <code>prefixByte</code> to the first byte of <code>value</code>.
+            </li>
+            <li>
+Set <code>suffix</code> to the remaining bytes of <code>value</code>
+(i.e., all bytes after the first).
+            </li>
+            <li>
+If <code>prefixByte</code> is <code>0x7a</code> (<code>'z'</code>):
+              <ol>
+                <li>
+Return the concatenation of <code>"z"</code> and the base58btc encoding
+of <code>suffix</code>.
+                </li>
+              </ol>
+            </li>
+            <li>
+If <code>prefixByte</code> is <code>0x75</code> (<code>'u'</code>):
+              <ol>
+                <li>
+Return the concatenation of <code>"u"</code> and the base64url encoding
+(no padding) of <code>suffix</code>.
+                </li>
+              </ol>
+            </li>
+            <li>
+If <code>prefixByte</code> is <code>0x4d</code> (<code>'M'</code>):
+              <ol>
+                <li>
+Return the concatenation of <code>"M"</code> and the base64pad encoding
+of <code>suffix</code>.
+                </li>
+              </ol>
+            </li>
+            <li>
+Otherwise, return <code>value</code>.
             </li>
           </ol>
         </section>
