@@ -632,14 +632,14 @@ This algorithm takes a CBOR-LD payload `cborldBytes`, and returns a JSON-LD docu
         </p>
         <ol>
           <li>
+Set `state` to an empty map.
+          </li>
+          <li>
 Set `result` to the result of passing `cborldBytes` to
 <a href="#get-registry-entry-id-algorithm"></a>.
           </li>
           <li>
 Set `state`.`registryEntryId` to `result`.`registryEntryId` and `suffix` to `result`.`suffix`.
-          </li>
-          <li>
-Set `state` to an empty map.
           </li>
           <li>
 If the registry entry associated with `state`.`registryEntryId` uses semantic compression:
