@@ -2200,21 +2200,21 @@ The URL Codec compresses URL values based on the scheme of the value.
 URLs are encoded as arrays, where the first integer denotes the scheme
 of the URL. The codec first checks whether the value matches a known
 JSON-LD term identifier, encoding it as a simple integer if so. Otherwise
-it delegates to one of the following URI-scheme-specific sub-codecs based
-on the URI scheme of the value.
+it delegates to one of the following URL-scheme-specific sub-codecs based
+on the URL scheme of the value.
         </p>
 
         <section>
           <h4>URL Scheme Table</h4>
           <p>
-The <dfn>URL Scheme Table</dfn> maps URI scheme prefixes to their
+The <dfn>URL Scheme Table</dfn> maps URL scheme prefixes to their
 associated compressed integer identifiers. Implementations that use the URL
 codec MUST use the following table. The <dfn>URL Scheme Reverse Table</dfn> is the
-inversion of this table (i.e. a map from integer to scheme prefix string).
+inversion of this table (i.e., a map from integers to scheme prefix strings).
           </p>
           <table class="simple">
             <thead>
-              <tr><th>URI Scheme Prefix</th><th>Integer Identifier</th></tr>
+              <tr><th>URL Scheme Prefix</th><th>Integer Identifier</th></tr>
             </thead>
             <tbody>
               <tr><td><code>http://</code></td><td>1</td></tr>
@@ -2230,9 +2230,9 @@ inversion of this table (i.e. a map from integer to scheme prefix string).
         <section>
           <h4>Create URL Encoder</h4>
           <p>
-This algorithm takes maps <code>state</code>, <code>termInfo</code>, and a
-string <code>valueToEncode</code>, and returns an encoder object or
-<code>undefined</code>.
+This algorithm takes a map <code>state</code>, a map <code>termInfo</code>,
+and a string <code>valueToEncode</code>, and returns either an encoder object
+or <code>undefined</code>.
           </p>
           <ol>
             <li>
@@ -2249,8 +2249,8 @@ invoked via <a href="#encode-url"></a>, encodes <code>termId</code> as
 a Major Type 0 (unsigned integer) CBOR item.
             </li>
             <li>
-Attempt to parse the URI scheme from <code>valueToEncode</code>.
-If parsing fails (the value is not a valid URI), return
+Attempt to parse the URL scheme from <code>valueToEncode</code>.
+If parsing fails (i.e., the value is not a valid URL), return
 <code>undefined</code>.
             </li>
             <li>
@@ -2258,29 +2258,29 @@ Set <code>scheme</code> to the longest matching prefix of
 <code>valueToEncode</code> that appears in the <a>URL Scheme Table</a>.
             </li>
             <li>
-If <code>scheme</code> starts with <code>"https"</code> or
-<code>"http"</code>, return the result of
+If <code>scheme</code> starts with "<code>https</code>" or
+"<code>http</code>", return the result of
 <a href="#create-http-url-encoder"></a> passing
 <code>valueToEncode</code> and <code>scheme</code>.
             </li>
             <li>
-If <code>scheme</code> is <code>"urn:uuid"</code>, return the result of
+If <code>scheme</code> is "<code>urn:uuid</code>", return the result of
 <a href="#create-uuid-urn-encoder"></a> passing
 <code>valueToEncode</code>.
             </li>
             <li>
-If <code>scheme</code> is <code>"data"</code>, return the result of
+If <code>scheme</code> is "<code>data</code>", return the result of
 <a href="#create-data-url-encoder"></a> passing
 <code>valueToEncode</code>.
             </li>
             <li>
-If <code>scheme</code> is <code>"did:v1:nym"</code> or
-<code>"did:key"</code>, return the result of
+If <code>scheme</code> is "<code>did:v1:nym</code>" or
+"<code>did:key</code>", return the result of
 <a href="#create-base58-did-url-encoder"></a> passing
 <code>valueToEncode</code> and <code>scheme</code>.
             </li>
             <li>
-Return <code>undefined</code> (no compression possible for this URI).
+Return <code>undefined</code> (meaning, no compression is possible for this URL).
             </li>
           </ol>
         </section>
@@ -2307,14 +2307,14 @@ URI-scheme sub-encoder and return the resulting CBOR binary data.
         <section>
           <h4>Create URL Decoder</h4>
           <p>
-This algorithm takes maps <code>state</code>, <code>termInfo</code>, and a
-value <code>valueToDecode</code>, and returns a decoder object or
+This algorithm takes a map <code>state</code>, a map <code>termInfo</code>,
+and a value <code>valueToDecode</code>, and returns a decoder object or
 <code>undefined</code>.
           </p>
           <ol>
             <li>
 If <code>valueToDecode</code> is a string, return <code>undefined</code>
-(value is already an uncompressed URL string; pass through).
+(meaning, value is already an uncompressed URL string; pass through).
             </li>
             <li>
 If <code>valueToDecode</code> is an array:
@@ -2328,24 +2328,24 @@ Set <code>scheme</code> to the value of <code>schemeId</code> in the
 <a>URL Scheme Reverse Table</a>.
                 </li>
                 <li>
-If <code>scheme</code> is <code>"http://"</code> or
-<code>"https://"</code>, return the result of
+If <code>scheme</code> is "<code>http</code>" or
+"<code>https</code>", return the result of
 <a href="#create-http-url-decoder"></a> passing
 <code>valueToDecode</code>.
                 </li>
                 <li>
-If <code>scheme</code> is <code>"urn:uuid:"</code>, return the result of
+If <code>scheme</code> is "<code>urn:uuid:</code>", return the result of
 <a href="#create-uuid-urn-decoder"></a> passing
 <code>valueToDecode</code>.
                 </li>
                 <li>
-If <code>scheme</code> is <code>"data:"</code>, return the result of
+If <code>scheme</code> is "<code>data</code>", return the result of
 <a href="#create-data-url-decoder"></a> passing
 <code>valueToDecode</code>.
                 </li>
                 <li>
-If <code>scheme</code> is <code>"did:v1:nym:"</code> or
-<code>"did:key:"</code>, return the result of
+If <code>scheme</code> is "<code>did:v1:nym:</code>" or
+"<code>did:key:</code>", return the result of
 <a href="#create-base58-did-url-decoder"></a> passing
 <code>valueToDecode</code>.
                 </li>
