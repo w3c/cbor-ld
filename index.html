@@ -1051,10 +1051,10 @@ If `activeContext`.`termMap` has an entry for `key`, set `definition` to the val
 `activeContext`.`termMap`. Otherwise, set `definition` to an empty map.
                 </li>
                 <li>
-Set `entryTerm` to be a new map.
+Set `entryTerm` to be a new map.Update index.html
                 </li>
                 <li>
-Set the value of "term" in `entryTerm` to be the value of `key`. Add `termId`, `plural`, and `definition`
+Set the value of "term" in `entryTerm` to be the value of `key`. Set the value of "def" in `entryTerm` to be the value of `definition`. Add `termId`, and `plural`
 to `entryTerm`.
                 </li>
                 <li>
@@ -1233,7 +1233,7 @@ Set `definition` to the value of `term` in `activeContext`.`termMap`.
 Set `entryTerm` to be a new map.
                 </li>
                 <li>
-Set the value of "termId" in `entryTerm` to be the value of `key`. Add `term`, `plural`, and `definition`
+Set the value of "termId" in `entryTerm` to be the value of `key`. Set the value of "def" in `entryTerm` to be the value of `definition`. Add `term`, and `plural`
 to `entryTerm`.
                 </li>
                 <li>
@@ -1306,7 +1306,7 @@ Set `definition` to the value of `term` in `activeContext`.`termMap`.
 Set `termInfo` to be a new map.
                 </li>
                 <li>
-Add `term`, `termId`, `plural`, and `definition` to `termInfo`.
+Set the value of "def" in `entryTerm` to be the value of `definition`. Add `term`, `termId`, and `plural` to `termInfo`.
                 </li>
                 <li>
 If `value` is not an array, set `values` to be an array containing as a single element `value`.
