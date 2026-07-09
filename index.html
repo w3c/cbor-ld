@@ -779,13 +779,12 @@ Otherwise, set `activeContext` to
           <li>
 If `state.strategy` is set to "compression", set `state` to `result.state` and
 `objectTypes` to `result.objectTypes` for `result` resulting from
-<a href="#get-object-types-for-compression-algorithm"></a>, passing `state`,
-`activeContext`, `input`, and `output`.
+<a href="#get-object-types-for-compression-algorithm"></a>, passing `activeContext`, and `input`.
           </li>
           <li>
 Otherwise, set `state` to `result.state` and `objectTypes` to `result.objectTypes`
 for `result` resulting from <a href="#get-object-types-for-decompression-algorithm"></a>,
-passing `state`, `activeContext`, `input`, and `output`.
+passing `state`, `activeContext`, and `input`.
           </li>
           <li>
 Set `activeContext` to the result of passing `activeContext` and `objectTypes` to
