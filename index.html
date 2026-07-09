@@ -793,15 +793,15 @@ Set `activeContext` to the result of passing `activeContext` and `objectTypes` t
           </li>
           <li>
 If `state.strategy` is set to "compression", set `state` to `result.state` and
-`termEntries` to `result.termEntries` for `result` resulting from
+`termEntries` to `result.entries` for `result` resulting from
 <a href="#get-input-entries-for-compression-algorithm"></a>, passing `state`,
 `input`, and `activeContext`.
           </li>
           <li>
-Otherwise, set `state` to `result.state`, `output` to `result.output`,
-and `termEntries` to `result.termEntries` for `result` resulting from
+Otherwise, set `state` to `result.state`,
+and `termEntries` to `result.entries` for `result` resulting from
 <a href="#get-input-entries-for-decompression-algorithm"></a>,
-passing `state`, `input`, output, and `activeContext`.
+passing `state`, `input`, and `activeContext`.
           </li>
           <li>
 For `[termInfo, value]` in `termEntries`:
