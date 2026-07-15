@@ -2200,8 +2200,8 @@ The URL Codec compresses URL values based on the prefix of the value,
 where the prefix is the longest matching entry in the <a>URL Prefix
 Table</a>. URLs are encoded as arrays, where the first integer
 identifies the prefix of the URL. The codec first checks whether the value matches a known
-JSON-LD term identifier, encoding it as a simple integer if so. Otherwise
-it delegates to one of the following prefix-specific sub-codecs based
+JSON-LD term identifier, encoding it as a simple integer if so. Otherwise,
+it delegates to one of the following prefix-specific sub-codecs, based
 on the prefix of the value.
         </p>
 
@@ -2210,7 +2210,7 @@ on the prefix of the value.
           <p>
 The <dfn>URL Prefix Table</dfn> maps URL prefixes to their
 associated compressed integer identifiers. Implementations that use the URL
-codec MUST use the following table. The <dfn>URL Prefix Reverse Table</dfn> is the
+codec MUST use the table below. The <dfn>URL Prefix Reverse Table</dfn> is the
 inversion of this table (i.e., a map from integers to URL prefix strings).
           </p>
           <table class="simple">
@@ -2258,7 +2258,7 @@ If parsing fails (i.e., the value is not a valid URL), return
 Set <code>prefix</code> to the entry in the <a>URL Prefix Table</a>
 such that <code>valueToEncode</code> starts with <code>prefix</code> and
 the remainder of <code>valueToEncode</code> following <code>prefix</code>
-does not contain a <code>':'</code> (U+003A COLON) character. If no such
+does not contain a "<code>:</code>" (U+003A COLON) character. If no such
 entry exists, return <code>undefined</code> (meaning, no compression is
 possible for this URL).
             </li>
@@ -2329,8 +2329,8 @@ Set <code>prefixId</code> to the first element of
 <code>valueToDecode</code>.
                 </li>
                 <li>
-Set <code>prefix</code> to the value of <code>prefixId</code> in the
-<a>URL Prefix Reverse Table</a>.
+Set <code>prefix</code> to the value corresponding to <code>prefixId</code>
+in the <a>URL Prefix Reverse Table</a>.
                 </li>
                 <li>
 If <code>prefix</code> is "<code>http://</code>" or
