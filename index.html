@@ -552,20 +552,60 @@ The `default` processing model uses semantic compression and includes the codecs
 may change or be removed.
           </li>
         </ul>
-      <p>
+        <p>
 The string "callerProvidedTable", may appear in `typeTables`, denoting that for this use case, a
 `Type Table` is required which is not globally defined.
-      </p>
-      <section>
-        <h3>Registry</h3>
+        </p>
+        <section>
+          <h3>Registration</h3>
+          <p>
+The <a href="https://json-ld.github.io/cborld-registry/">current CBOR-LD Registry</a> is available online.
+          </p>
+          <p>
+Registration requirements vary based on what Registry Entry ID is sought. The ranges are as follows:
+          </p>
+          <ul>
+            <li>
+<b>0 - 255</b>: Reserved
+            </li>
+            <li>
+<b>256 - 65&#8239;535</b>: Specification required
+            </li>
+            <li>
+<b>65&#8239;536+</b>: First come, first serve
+            </li>
+          </ul>
+        </p>
+        <p>
+Registration requests must be in the form of pull requests raised against the CBOR-LD Registry
+via a fork of the repository. These requests must include:
+        </p>
+        <ol>
+          <li>
+The registry entry ID requested,
+          </li>
+          <li>
+The use case for the registry entry,
+          </li>
+          <li>
+A `.yml` file added to the `tables` directory, with the Registry Entry ID requested as the filename,
+which specifies the technical content of the registry entry. If this file does not conform with the
+expected file format, requests may be rejected without explanation.
+          </li>
+        </ol>
+        <p>
+To register an entry in the range <b>256–65&#8239;535</b>, a mature specification or standard document
+from a recognized standards developing organization (SDO) must be provided alongside the request. Deeming
+whether a specification or other document is acceptable will use similar criteria to how the W3C evaluates
+organizations and documents for allowing or disallowing normative reference from a W3C standard.
+These requests will undergo expert review before allocation. Maintainers of the JSON-LD family of
+specifications and/or W3C staff are responsible for this review.
+        </p>
+        <p>
+Reasonable and conformant registration requests for ID <b>65&#8239;536</b> or higher will be merged by
+the registry repository maintainers on a "first-come, first-served" basis, without additional review.
+        </p>
       </section>
-      <p>
-The current CBOR-LD Registry can be found <a href="https://json-ld.github.io/cborld-registry/">here</a>.
-      </p>
-      <p>
-To register an entry, follow the instructions in <a href="https://github.com/json-ld/cborld-registry">the README</a>. The registry is owned by the W3C JSON-LD Community Group.
-      </p>
-
     </section>
   </section>
   <section class="normative">
