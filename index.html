@@ -55,12 +55,12 @@
       // only "name" is required
       editors:  [
         { name:       "Manu Sporny",
-          url:        "http://manu.sporny.org/",
+          url:        "https://github.com/msporny",
           w3cid:      "41758",
           company:    "Digital Bazaar",
           companyURL: "https://digitalbazaar.com/"},
         { name:       "Dave Longley",
-          url:        "https://digitalbazaar.com/author/dlongley/",
+          url:        "https://github.com/dlongley",
           w3cid:      "48025",
           company:    "Digital Bazaar",
           companyURL: "https://digitalbazaar.com/"},
@@ -75,11 +75,11 @@
       // only "name" is required. Same format as editors.
       authors:  [
         { name:       "Manu Sporny",
-          url:        "http://manu.sporny.org/",
+          url:        "https://github.com/msporny",
           company:    "Digital Bazaar",
           companyURL: "https://digitalbazaar.com/"},
         { name:       "Dave Longley",
-          url:        "https://digitalbazaar.com/author/dlongley/",
+          url:        "https://github.com/dlongley",
           w3cid:      "48025",
           company:    "Digital Bazaar",
           companyURL: "https://digitalbazaar.com/"}
@@ -667,14 +667,14 @@ This algorithm takes a CBOR-LD payload `cborldBytes`, and returns a JSON-LD docu
         </p>
         <ol>
           <li>
+Set `state` to an empty map.
+          </li>
+          <li>
 Set `result` to the result of passing `cborldBytes` to
 <a href="#get-registry-entry-id-algorithm"></a>.
           </li>
           <li>
 Set `state`.`registryEntryId` to `result`.`registryEntryId` and `suffix` to `result`.`suffix`.
-          </li>
-          <li>
-Set `state` to an empty map.
           </li>
           <li>
 If the registry entry associated with `state`.`registryEntryId` uses semantic compression:
@@ -1017,7 +1017,7 @@ If `isArray` is `true`, set `id` to the value of "@context" in `state.keywordsMa
 and set the value of `id` in `output` to `encodedContexts`.
             </li>
             <li>
-Otherwise, set `id` to the value of "@context" in `state.keywordMap` and set the value of
+Otherwise, set `id` to the value of "@context" in `state.keywordsMap` and set the value of
 `id` in `output` to the first element of `encodedContexts`.
             </li>
             <li>

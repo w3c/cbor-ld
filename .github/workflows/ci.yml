@@ -1,0 +1,29 @@
+# This workflow validates the document for markup and examples.
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request: {}
+
+jobs:
+  tests:
+    name: Build, Validate and Deploy
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    # Validate via ReSpec
+    # See https://github.com/w3c/spec-prod/blob/main/docs/examples.md
+    - name: ReSpec Checker
+      uses: w3c/spec-prod@v2
+      with:
+        TOOLCHAIN: respec
+        SOURCE: index.html
+        VALIDATE_LINKS: false
+        VALIDATE_MARKUP: true
+        W3C_ECHIDNA_TOKEN: ${{ secrets.ECHIDNA_TOKEN }}
+        W3C_WG_DECISION_URL: https://www.w3.org/2026/04/01-json-ld-minutes.html#58ba
+        W3C_BUILD_OVERRIDE: |
+          specStatus: WD
+          shortName: cbor-ld-10
