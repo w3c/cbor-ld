@@ -564,21 +564,19 @@ The current CBOR-LD Registry can be found <a href="https://json-ld.github.io/cbo
       Registration requirements vary based on what Registry Entry ID is sought. The ranges are as follows:
         <ul>
           <li>
-<b>0-255</b>: Reserved
+<b>0 - 255</b>: Reserved
           </li>
           <li>
-<b>256-65,535</b>: Specification required
+<b>256 - 65&#8239;535</b>: Specification required
           </li>
           <li>
-<b>65,536+</b>: First come, first served
-
+<b>65&#8239;536+</b>: First come, first serve
           </li>
         </ul>
       </p>
       <p>
 Registration requests must be in the form of pull requests raised against the CBOR-LD Registry
-via a fork of the repository. These requests must include:
-
+via a fork of the repository. These requests must include:
         <ol>
           <li>
 The registry entry ID requested,
@@ -587,21 +585,21 @@ The registry entry ID requested,
 The use case for the registry entry,
           </li>
           <li>
-A `.yml` file added to the `tables` directory, with the Registry Entry ID requested as the filename,
-
+A `.yml` file added to the `tables` directory, with the Registry Entry ID requested as the filename,
 which specifies the technical content of the registry entry. If this file does not conform with the
 expected file format, requests may be rejected without explanation.
           </li>
         </ol>
       </p>
       <p>
-To register an entry in the range <b>256-65,535</b>, a mature specification or standard document
-must be provided alongside the request. These requests will undergo expert review before allocation. 
+To register an entry in the range <b>256 - 65&#8239;535</b>, a mature specification or standard document
+from a recognized standards developing organization (SDO) must be provided alongside the request.
+These requests will undergo expert review before allocation. Maintainers of the JSON-LD family of
+specifications and/or W3C staff are responsible for this review.
       </p>
       <p>
-Reasonable and conformant registration requests for ID <b>65,536</b> or higher will be merged by
-the registry repository maintainers on a "first-come, first-served" basis, without additional review.
-
+Reasonable and conformant registration requests for ID <b>65&#8239;536</b> or higher will be merged by
+the registry repository maintainers on a "first-come, first-served" basis, without additional review.
       </p>
     </section>
   </section>
