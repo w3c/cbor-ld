@@ -437,8 +437,8 @@ in an invertible way.
         </li>
         <li>
 <b>Typed-value compression (codec)</b>: Dynamically compresses typed values in an invertible
-way, based on an <i>a priori</i> understanding of the data type (e.g., removes scheme
-strings from URLs).
+way, based on an <i>a priori</i> understanding of the data type (e.g., removes common
+prefix strings from URLs).
         </li>
         <li>
 <b>Typed-value compression (registry dictionary)</b>: Creates static dictionaries, listed in
@@ -2196,25 +2196,26 @@ Return `decoderData`.`decoded`.
       <section>
         <h3>URL Codec</h3>
         <p>
-The URL Codec compresses URL values based on the scheme of the value.
-URLs are encoded as arrays, where the first integer denotes the scheme
-of the URL. The codec first checks whether the value matches a known
+The URL Codec compresses URL values based on the prefix of the value,
+where the prefix is the longest matching entry in the <a>URL Prefix
+Table</a>. URLs are encoded as arrays, where the first integer
+identifies the prefix of the URL. The codec first checks whether the value matches a known
 JSON-LD term identifier, encoding it as a simple integer if so. Otherwise
-it delegates to one of the following URL-scheme-specific sub-codecs based
-on the URL scheme of the value.
+it delegates to one of the following prefix-specific sub-codecs based
+on the prefix of the value.
         </p>
 
         <section>
-          <h4>URL Scheme Table</h4>
+          <h4>URL Prefix Table</h4>
           <p>
-The <dfn>URL Scheme Table</dfn> maps URL scheme prefixes to their
+The <dfn>URL Prefix Table</dfn> maps URL prefixes to their
 associated compressed integer identifiers. Implementations that use the URL
-codec MUST use the following table. The <dfn>URL Scheme Reverse Table</dfn> is the
-inversion of this table (i.e., a map from integers to scheme prefix strings).
+codec MUST use the following table. The <dfn>URL Prefix Reverse Table</dfn> is the
+inversion of this table (i.e., a map from integers to URL prefix strings).
           </p>
           <table class="simple">
             <thead>
-              <tr><th>URL Scheme Prefix</th><th>Integer Identifier</th></tr>
+              <tr><th>URL Prefix</th><th>Integer Identifier</th></tr>
             </thead>
             <tbody>
               <tr><td><code>http://</code></td><td>1</td></tr>
@@ -2249,35 +2250,39 @@ invoked via <a href="#encode-url"></a>, encodes <code>termId</code> as
 a Major Type 0 (unsigned integer) CBOR item.
             </li>
             <li>
-Attempt to parse the URL scheme from <code>valueToEncode</code>.
+Attempt to parse <code>valueToEncode</code> as a URL.
 If parsing fails (i.e., the value is not a valid URL), return
 <code>undefined</code>.
             </li>
             <li>
-Set <code>scheme</code> to the longest matching prefix of
-<code>valueToEncode</code> that appears in the <a>URL Scheme Table</a>.
+Set <code>prefix</code> to the entry in the <a>URL Prefix Table</a>
+such that <code>valueToEncode</code> starts with <code>prefix</code> and
+the remainder of <code>valueToEncode</code> following <code>prefix</code>
+does not contain a <code>':'</code> (U+003A COLON) character. If no such
+entry exists, return <code>undefined</code> (meaning, no compression is
+possible for this URL).
             </li>
             <li>
-If <code>scheme</code> starts with "<code>https</code>" or
-"<code>http</code>", return the result of
+If <code>prefix</code> is "<code>https://</code>" or
+"<code>http://</code>", return the result of
 <a href="#create-http-url-encoder"></a> passing
-<code>valueToEncode</code> and <code>scheme</code>.
+<code>valueToEncode</code>.
             </li>
             <li>
-If <code>scheme</code> is "<code>urn:uuid</code>", return the result of
+If <code>prefix</code> is "<code>urn:uuid:</code>", return the result of
 <a href="#create-uuid-urn-encoder"></a> passing
 <code>valueToEncode</code>.
             </li>
             <li>
-If <code>scheme</code> is "<code>data</code>", return the result of
+If <code>prefix</code> is "<code>data:</code>", return the result of
 <a href="#create-data-url-encoder"></a> passing
 <code>valueToEncode</code>.
             </li>
             <li>
-If <code>scheme</code> is "<code>did:v1:nym</code>" or
-"<code>did:key</code>", return the result of
+If <code>prefix</code> is "<code>did:v1:nym:</code>" or
+"<code>did:key:</code>", return the result of
 <a href="#create-base58-did-url-encoder"></a> passing
-<code>valueToEncode</code> and <code>scheme</code>.
+<code>valueToEncode</code>.
             </li>
             <li>
 Return <code>undefined</code> (meaning, no compression is possible for this URL).
@@ -2299,7 +2304,7 @@ If the encoder was created for a term-ID match (step 3 of
             </li>
             <li>
 Otherwise, invoke the <code>encode</code> method of the appropriate
-URI-scheme sub-encoder and return the resulting CBOR binary data.
+prefix-specific sub-encoder and return the resulting CBOR binary data.
             </li>
           </ol>
         </section>
@@ -2320,37 +2325,47 @@ If <code>valueToDecode</code> is a string, return <code>undefined</code>
 If <code>valueToDecode</code> is an array:
               <ol>
                 <li>
-Set <code>schemeId</code> to the first element of
+Set <code>prefixId</code> to the first element of
 <code>valueToDecode</code>.
                 </li>
                 <li>
-Set <code>scheme</code> to the value of <code>schemeId</code> in the
-<a>URL Scheme Reverse Table</a>.
+Set <code>prefix</code> to the value of <code>prefixId</code> in the
+<a>URL Prefix Reverse Table</a>.
                 </li>
                 <li>
-If <code>scheme</code> is "<code>http</code>" or
-"<code>https</code>", return the result of
+If <code>prefix</code> is "<code>http://</code>" or
+"<code>https://</code>", set <code>decoder</code> to the result of
 <a href="#create-http-url-decoder"></a> passing
 <code>valueToDecode</code>.
                 </li>
                 <li>
-If <code>scheme</code> is "<code>urn:uuid:</code>", return the result of
+Otherwise, if <code>prefix</code> is "<code>urn:uuid:</code>", set
+<code>decoder</code> to the result of
 <a href="#create-uuid-urn-decoder"></a> passing
 <code>valueToDecode</code>.
                 </li>
                 <li>
-If <code>scheme</code> is "<code>data</code>", return the result of
+Otherwise, if <code>prefix</code> is "<code>data:</code>", set
+<code>decoder</code> to the result of
 <a href="#create-data-url-decoder"></a> passing
 <code>valueToDecode</code>.
                 </li>
                 <li>
-If <code>scheme</code> is "<code>did:v1:nym:</code>" or
-"<code>did:key:</code>", return the result of
+Otherwise, if <code>prefix</code> is "<code>did:v1:nym:</code>" or
+"<code>did:key:</code>", set <code>decoder</code> to the result of
 <a href="#create-base58-did-url-decoder"></a> passing
 <code>valueToDecode</code>.
                 </li>
                 <li>
-Otherwise, throw an <code>ERR_UNKNOWN_COMPRESSED_VALUE</code> error.
+If <code>prefix</code> did not match any of the above (including when
+<code>prefixId</code> has no entry in the
+<a>URL Prefix Reverse Table</a>), or if <code>decoder</code> is
+<code>undefined</code> (meaning, the sub-decoder rejected the shape of
+<code>valueToDecode</code>), throw an
+<code>ERR_UNKNOWN_COMPRESSED_VALUE</code> error.
+                </li>
+                <li>
+Return <code>decoder</code>.
                 </li>
               </ol>
             </li>
@@ -2380,7 +2395,7 @@ If the decoder was created for an integer term-ID value (step 3 of
             </li>
             <li>
 Otherwise, invoke the <code>decode</code> method of the appropriate
-URI-scheme sub-decoder and return the resulting string.
+prefix-specific sub-decoder and return the resulting string.
             </li>
           </ol>
         </section>
@@ -2389,37 +2404,35 @@ URI-scheme sub-decoder and return the resulting string.
         <section>
           <h4>HTTP URL Codec</h4>
           <p>
-The HTTP URL Codec handles values whose URI scheme is
+The HTTP URL Codec handles values whose prefix is
 <code>http://</code> or <code>https://</code>. An encoded HTTP URL is
 represented as a two-element CBOR array
-<code>[schemeId, remainder]</code> where <code>schemeId</code> is the
-integer from the <a>URL Scheme Table</a> and <code>remainder</code> is
-the scheme-stripped portion of the URL as a text string.
+<code>[prefixId, remainder]</code> where <code>prefixId</code> is the
+integer from the <a>URL Prefix Table</a> and <code>remainder</code> is
+the prefix-stripped portion of the URL as a text string.
           </p>
 
           <section id="create-http-url-encoder">
             <h5>Create HTTP URL Encoder</h5>
             <p>
-This algorithm takes a string <code>value</code> and a string
-<code>scheme</code> (either <code>"https://"</code> or
-<code>"http://"</code>), and returns an encoder object or
-<code>undefined</code>.
+This algorithm takes a string <code>value</code>, and returns an
+encoder object or <code>undefined</code>.
             </p>
             <ol>
               <li>
 If <code>value</code> starts with <code>"https://"</code>, set
-<code>scheme</code> to <code>"https://"</code>.
+<code>prefix</code> to <code>"https://"</code>.
               </li>
               <li>
 Otherwise, if <code>value</code> starts with <code>"http://"</code>, set
-<code>scheme</code> to <code>"http://"</code>.
+<code>prefix</code> to <code>"http://"</code>.
               </li>
               <li>
 Otherwise, return <code>undefined</code>.
               </li>
               <li>
 Return an encoder object containing <code>value</code> and
-<code>scheme</code>.
+<code>prefix</code>.
               </li>
             </ol>
           </section>
@@ -2432,16 +2445,16 @@ This algorithm takes an encoder object from
             </p>
             <ol>
               <li>
-Set <code>schemeId</code> to the value of <code>encoderData.scheme</code>
-in the <a>URL Scheme Table</a>.
+Set <code>prefixId</code> to the value of <code>encoderData.prefix</code>
+in the <a>URL Prefix Table</a>.
               </li>
               <li>
 Set <code>rest</code> to the substring of <code>encoderData.value</code>
-beginning after <code>encoderData.scheme</code>.
+beginning after <code>encoderData.prefix</code>.
               </li>
               <li>
 Return a CBOR encoding of a two-element array
-<code>[schemeId, rest]</code>: Major Type 4 (array) containing a
+<code>[prefixId, rest]</code>: Major Type 4 (array) containing a
 Major Type 0 (unsigned integer) item followed by a Major Type 3
 (text string) item.
               </li>
@@ -2460,11 +2473,11 @@ If <code>valueToDecode</code> has exactly two elements and the second
 element is a text string:
                 <ol>
                   <li>
-Set <code>scheme</code> to the value of <code>valueToDecode[0]</code>
-in the <a>URL Scheme Reverse Table</a>.
+Set <code>prefix</code> to the value of <code>valueToDecode[0]</code>
+in the <a>URL Prefix Reverse Table</a>.
                   </li>
                   <li>
-Return a decoder object containing <code>scheme</code>.
+Return a decoder object containing <code>prefix</code>.
                   </li>
                 </ol>
               </li>
@@ -2483,7 +2496,7 @@ This algorithm takes a decoder object from
             </p>
             <ol>
               <li>
-Return the concatenation of <code>decoderData.scheme</code> and
+Return the concatenation of <code>decoderData.prefix</code> and
 <code>valueToDecode[1]</code>.
               </li>
             </ol>
@@ -2494,7 +2507,7 @@ Return the concatenation of <code>decoderData.scheme</code> and
         <section>
           <h4>UUID URN Codec</h4>
           <p>
-The UUID URN Codec handles values whose URI scheme is
+The UUID URN Codec handles values whose prefix is
 <code>urn:uuid:</code>. An encoded UUID URN is a two-element CBOR array
 <code>[3, uuidValue]</code> where <code>uuidValue</code> is either a
 16-byte Major Type 2 (byte string) representing the UUID in binary form
@@ -2527,20 +2540,22 @@ This algorithm takes an encoder object, and returns CBOR binary data.
             </p>
             <ol>
               <li>
-Set <code>schemeId</code> to <code>3</code> (the entry for
-<code>"urn:uuid:"</code> in the <a>URL Scheme Table</a>).
+Set <code>prefixId</code> to <code>3</code> (the entry for
+<code>"urn:uuid:"</code> in the <a>URL Prefix Table</a>).
               </li>
               <li>
 Set <code>rest</code> to the substring of <code>encoderData.value</code>
 beginning after <code>"urn:uuid:"</code>.
               </li>
               <li>
-If <code>rest</code> is entirely lowercase:
+If <code>rest</code> contains no uppercase characters (i.e., it is
+equal to its lowercase form):
                 <ol>
                   <li>
 Set <code>uuidBytes</code> to the 16-byte binary representation of the
 UUID obtained by parsing <code>rest</code> according to
-[[RFC4122]].
+[[RFC4122]]. If <code>rest</code> cannot be parsed as a valid UUID, an
+error is thrown and encoding fails.
                   </li>
                   <li>
 Return a CBOR encoding of a two-element array
@@ -2604,8 +2619,8 @@ Return the concatenation of <code>"urn:uuid:"</code> and
         <section>
           <h4>Data URL Codec</h4>
           <p>
-The Data URL Codec handles values whose URI scheme is
-<code>data:</code>, as defined in [[RFC2397]]. Base64-encoded data URLs
+The Data URL Codec handles values whose prefix is
+<code>data:</code> (data URLs, as defined in [[RFC2397]]). Base64-encoded data URLs
 (matching <code>data:&lt;mediatype&gt;;base64,&lt;data&gt;</code>) are
 encoded as a three-element CBOR array
 <code>[4, mediatype, dataBytes]</code>. Non-base64 data URLs are encoded
@@ -2625,8 +2640,11 @@ If <code>value</code> does not start with <code>"data:"</code>, return
 <code>undefined</code>.
               </li>
               <li>
-Attempt to match <code>value</code> against the pattern
-<code>data:(?&lt;mediatype&gt;.*);base64,(?&lt;data&gt;.*)</code>.
+Attempt to match <code>value</code> against the regular expression
+<code>^data:(?&lt;mediatype&gt;.*);base64,(?&lt;data&gt;.*)$</code>,
+where each <code>.*</code> is greedy (i.e., if the string
+"<code>;base64,</code>" occurs more than once, the
+<code>mediatype</code> group extends to the last occurrence).
               </li>
               <li>
 If the match succeeds:
@@ -2658,8 +2676,8 @@ This algorithm takes an encoder object from
             </p>
             <ol>
               <li>
-Set <code>schemeId</code> to <code>4</code> (the entry for
-<code>"data:"</code> in the <a>URL Scheme Table</a>).
+Set <code>prefixId</code> to <code>4</code> (the entry for
+<code>"data:"</code> in the <a>URL Prefix Table</a>).
               </li>
               <li>
 If <code>encoderData.base64</code> is <code>true</code>:
@@ -2672,7 +2690,7 @@ portion).
                   </li>
                   <li>
 Return a CBOR encoding of a three-element array
-<code>[schemeId, mediatype, dataBytes]</code>: Major Type 4 (array)
+<code>[prefixId, mediatype, dataBytes]</code>: Major Type 4 (array)
 containing a Major Type 0 integer, a Major Type 3 text string, and a
 Major Type 2 byte string.
                   </li>
@@ -2687,7 +2705,7 @@ beginning after <code>"data:"</code>.
                   </li>
                   <li>
 Return a CBOR encoding of a two-element array
-<code>[schemeId, rest]</code>: Major Type 4 (array) containing a
+<code>[prefixId, rest]</code>: Major Type 4 (array) containing a
 Major Type 0 integer and a Major Type 3 text string.
                   </li>
                 </ol>
@@ -2754,19 +2772,19 @@ Otherwise (non-base64 mode), return the concatenation of
         <section>
           <h4>Base58 DID URL Codec</h4>
           <p>
-The Base58 DID URL Codec handles DID URLs using the
-<code>did:v1:nym:</code> and <code>did:key:</code> schemes, whose
+The Base58 DID URL Codec handles DID URLs whose prefix is
+<code>did:v1:nym:</code> or <code>did:key:</code>, and whose
 authority (and optional fragment) components are typically multibase
 base58btc-encoded strings (those starting with the character
 <code>'z'</code>). A compressed DID URL is encoded as a two- or
-three-element CBOR array <code>[schemeId, authority]</code> or
-<code>[schemeId, authority, fragment]</code>. When a component starts
+three-element CBOR array <code>[prefixId, authority]</code> or
+<code>[prefixId, authority, fragment]</code>. When a component starts
 with <code>'z'</code> and is valid base58btc, it is stored as a raw byte
 string; otherwise it is stored as a text string.
           </p>
 
           <aside class="note">
-The DID URL Scheme Table entries used by this codec are
+The <a>URL Prefix Table</a> entries used by this codec are
 <code>did:v1:nym:</code> → <code>1024</code> and
 <code>did:key:</code> → <code>1025</code>.
           </aside>
@@ -2774,20 +2792,19 @@ The DID URL Scheme Table entries used by this codec are
           <section id="create-base58-did-url-encoder">
             <h5>Create Base58 DID URL Encoder</h5>
             <p>
-This algorithm takes a string <code>value</code> and a string
-<code>scheme</code>, and returns an encoder object or
-<code>undefined</code>.
+This algorithm takes a string <code>value</code>, and returns an
+encoder object or <code>undefined</code>.
             </p>
             <ol>
               <li>
-For each <code>[scheme, schemeId]</code> pair in the
-<a>URL Scheme Table</a> where the scheme starts with
+For each <code>[prefix, prefixId]</code> pair in the
+<a>URL Prefix Table</a> where the prefix starts with
 <code>"did:"</code>:
                 <ol>
                   <li>
-If <code>value</code> starts with <code>scheme</code>, return an encoder
-object containing <code>value</code>, <code>scheme</code>, and
-<code>schemeId</code>.
+If <code>value</code> starts with <code>prefix</code>, return an encoder
+object containing <code>value</code>, <code>prefix</code>, and
+<code>prefixId</code>.
                   </li>
                 </ol>
               </li>
@@ -2807,7 +2824,7 @@ data.
             <ol>
               <li>
 Set <code>suffix</code> to the substring of <code>encoderData.value</code>
-beginning after <code>encoderData.scheme</code>.
+beginning after <code>encoderData.prefix</code>.
               </li>
               <li>
 Split <code>suffix</code> on the first occurrence of <code>'#'</code>
@@ -2821,7 +2838,7 @@ Set <code>authorityEncoded</code> to the result of applying the
               </li>
               <li>
 Initialize <code>entries</code> to
-<code>[encoderData.schemeId, authorityEncoded]</code>.
+<code>[encoderData.prefixId, authorityEncoded]</code>.
               </li>
               <li>
 If <code>fragment</code> is defined:
@@ -2883,7 +2900,7 @@ If <code>valueToDecode</code> has exactly two or three elements:
                 <ol>
                   <li>
 Set <code>prefix</code> to the value of <code>valueToDecode[0]</code>
-in the <a>URL Scheme Reverse Table</a>.
+in the <a>URL Prefix Reverse Table</a>.
                   </li>
                   <li>
 Return a decoder object containing <code>prefix</code>.
