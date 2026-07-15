@@ -570,13 +570,15 @@ The current CBOR-LD Registry can be found <a href="https://json-ld.github.io/cbo
 <b>256-65,535</b>: Specification required
           </li>
           <li>
-<b>65,536+</b>: First come, first serve
+<b>65,536+</b>: First come, first served
+
           </li>
         </ul>
       </p>
       <p>
 Registration requests must be in the form of pull requests raised against the CBOR-LD Registry
-from a fork of the repository. These requests must include:
+via a fork of the repository. These requests must include:
+
         <ol>
           <li>
 The registry entry ID requested,
@@ -585,7 +587,8 @@ The registry entry ID requested,
 The use case for the registry entry,
           </li>
           <li>
-A .yml file added to the `tables` directory, with the Registry Entry ID requested as the filename,
+A `.yml` file added to the `tables` directory, with the Registry Entry ID requested as the filename,
+
 which specifies the technical content of the registry entry. If this file does not conform with the
 expected file format, requests may be rejected without explanation.
           </li>
@@ -597,7 +600,8 @@ must be provided alongside the request. These requests will undergo expert revie
       </p>
       <p>
 Reasonable and conformant registration requests for ID <b>65,536</b> or higher will be merged by
-the registry repository maintainers on a first-come-first-serve basis without additional review.
+the registry repository maintainers on a "first-come, first-served" basis, without additional review.
+
       </p>
     </section>
   </section>
