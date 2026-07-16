@@ -428,7 +428,7 @@ JSON-LD processing.
     <h1>Basic Concept</h1>
     <p>
 At a high level, CBOR-LD is a compact, binary serialization for JSON-LD that allows
-the following mechanisms for additional compression:
+the following mechanisms for additional compression:</p>
       <ul>
         <li>
 <b>Semantic compression</b>: Dynamically creates a mapping from JSON-LD terms to integers,
@@ -445,7 +445,6 @@ prefix strings from URLs).
 a CBOR-LD Registry Entry, for use-case-specific, typed-value compression.
         </li>
       </ul>
-    </p>
     <p>
 Codecs are the basic primitive for compressing typed values in a generic way. Semantic compression
 is for compressing JSON-LD terms. Registry dictionaries are for compressing typed values in a
@@ -777,29 +776,28 @@ Otherwise, set `activeContext` to
 `activeContext`, `input`, and `output`.
           </li>
           <li>
-If `state.strategy` is set to "compression", set `state` to `result.state` and
-`objectTypes` to `result.objectTypes` for `result` resulting from
-<a href="#get-object-types-for-compression-algorithm"></a>, passing `state`,
-`activeContext`, `input`, and `output`.
+If `state.strategy` is set to "compression", set
+`objectTypes` to the result of
+<a href="#get-object-types-for-compression-algorithm"></a>, passing `activeContext`, and `input`.
           </li>
           <li>
-Otherwise, set `state` to `result.state` and `objectTypes` to `result.objectTypes`
-for `result` resulting from <a href="#get-object-types-for-decompression-algorithm"></a>,
-passing `state`, `activeContext`, `input`, and `output`.
+Otherwise, set `objectTypes` the result of
+<a href="#get-object-types-for-decompression-algorithm"></a>,
+passing `state`, `activeContext`, and `input`.
           </li>
           <li>
 Set `activeContext` to the result of passing `activeContext` and `objectTypes` to
 <a href="#apply-type-scoped-contexts-algorithm"></a>.
           </li>
           <li>
-If `state.strategy` is set to "compression", set `state` to `result.state` and
-`termEntries` to `result.termEntries` for `result` resulting from
+If `state.strategy` is set to "compression", set
+`termEntries` to the result of
 <a href="#get-input-entries-for-compression-algorithm"></a>, passing `state`,
 `input`, and `activeContext`.
           </li>
           <li>
-Otherwise, set `state` to `result.state`, `output` to `result.output`,
-and `termEntries` to `result.termEntries` for `result` resulting from
+Otherwise, set
+`termEntries` to the result of
 <a href="#get-input-entries-for-decompression-algorithm"></a>,
 passing `state`, `input`, output, and `activeContext`.
           </li>
@@ -1016,7 +1014,7 @@ Return `result`.
         <section>
           <h4>Get Input Entries for Compression Algorithm</h4>
           <p>
-This algorithm takes maps `state`, `activeContext`, and `input`, and returns a map `state` and an array `entries`.
+This algorithm takes maps `state`, `activeContext`, and `input`, and returns an array `entries`.
           </p>
           <ol>
             <li>
@@ -1066,7 +1064,7 @@ Add `entry` to `entries`.
               </ol>
             </li>
             <li>
-Return a map `result` containing `entries` and `state`.
+Return `entries`.
             </li>
           </ol>
         </section>
@@ -1194,7 +1192,7 @@ Return `decodedValue`.
         <section>
           <h4>Get Input Entries for Decompression Algorithm</h4>
           <p>
-This algorithm takes maps `state`, `activeContext`, and `input`, and returns a map `state` and an array
+This algorithm takes maps `state`, `activeContext`, and `input`, and returns an array
 `entries`.
           </p>
           <ol>
@@ -1248,7 +1246,7 @@ Add `entry` to `entries`.
 Sort `entries` by the value of `term` in each element of `entries`.
             </li>
             <li>
-Return a map `result` containing `entries` and `state`.
+Return `entries`.
             </li>
           </ol>
         </section>
@@ -1256,7 +1254,7 @@ Return a map `result` containing `entries` and `state`.
           <h4>Get Object Types for Decompression Algorithm</h4>
           <p>
 This algorithm takes maps `state`, `activeContext`, `input` as inputs, and
-returns a map `state` and a set `objectTypes`.
+returns a set `objectTypes`.
           </p>
           <ol>
             <li>
