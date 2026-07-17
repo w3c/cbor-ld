@@ -1256,11 +1256,11 @@ Otherwise:
 If `key` is odd, set `plural` to true. Otherwise, set `plural` to false.
                     </li>
                     <li>
-If `plural` is `true`, set `term` to the value of `id` minus 1 in `state`.`idToTerm`.
+If `plural` is `true`, set `term` to the value of `key` minus 1 in `state`.`idToTerm`.
 If that value does not have an entry, throw an error ERR_UNKNOWN_CBORLD_TERM_ID.
                     </li>
                     <li>
-Otherwise, set `term` to the value of `id` in `state`.`idToTerm`. If that value does not have
+Otherwise, set `term` to the value of `key` in `state`.`idToTerm`. If that value does not have
 an entry, throw an error ERR_UNKNOWN_CBORLD_TERM_ID.
                     </li>
                   </ol>
