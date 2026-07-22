@@ -812,7 +812,7 @@ to `contextConversionResult.output`, and `state` to `contextConversionResult.sta
           </li>
           <li>
 Otherwise, set `activeContext` to
-`result.activeContext` and `state` to `result.state` of `result` resulting from
+`result.activeContext`, `output` to `result.output`, and `state` to `result.state` of `result` resulting from
 <a href="#convert-contexts-for-decompression-algorithm"></a>, passing `state`,
 `activeContext`, `input`, and `output`.
           </li>
@@ -1197,7 +1197,7 @@ Set `embeddedContextResult` to the result of <a href="#apply-embedded-contexts-a
 `activeContext`, `output` as `input`, and `state`.
             </li>
             <li>
-Return `embeddedContextResult`.
+Set `result` to `embeddedContextResult` and `result.output` to `output`. Return `result`.
             </li>
           </ol>
         </section>
