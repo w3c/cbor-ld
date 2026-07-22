@@ -428,7 +428,8 @@ JSON-LD processing.
     <h1>Basic Concept</h1>
     <p>
 At a high level, CBOR-LD is a compact, binary serialization for JSON-LD that allows
-the following mechanisms for additional compression:</p>
+the following mechanisms for additional compression:
+    </p>
       <ul>
         <li>
 <b>Semantic compression</b>: Dynamically creates a mapping from JSON-LD terms to integers,
@@ -821,7 +822,7 @@ If `state.strategy` is set to "compression", set
 <a href="#get-object-types-for-compression-algorithm"></a>, passing `activeContext`, and `input`.
           </li>
           <li>
-Otherwise, set `objectTypes` the result of
+Otherwise, set `objectTypes` to the result of
 <a href="#get-object-types-for-decompression-algorithm"></a>,
 passing `state`, `activeContext`, and `input`.
           </li>
