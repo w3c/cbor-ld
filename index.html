@@ -451,7 +451,8 @@ Codecs are the basic primitive for compressing typed values in a generic way. Se
 is for compressing JSON-LD terms. Registry dictionaries are for compressing typed values in a
 use-case-specific way. Each of these is optional — CBOR-LD can be used with any, all, or none of
 these compression strategies. Taken together, the set of these strategies that is used for
-a particular use case is known as a <i>processing model</i>.
+a particular use case is known as a <dfn>processing model</dfn>. Processing models are
+described in detail in <a href="#processing-models"></a>.
     </p>
   </section>
   <section class="informative">
@@ -485,6 +486,176 @@ If and when the original JSON-LD is required, decoding from CBOR-LD to JSON-LD c
 of replacing every CBOR byte value with the associated key from the term-codec map.
       </li>
     </ol>
+  </section>
+
+  <section class="informative">
+    <h1>Processing Models</h1>
+    <p>
+As described in <a href="#basic-concept"></a>, the particular set of compression and
+conversion strategies used for a given use case is known as a <a>processing model</a>.
+Every CBOR-LD payload is associated with exactly one processing model, selected by the
+<a>CBOR-LD Registry Entry</a> whose identifier is carried in the payload's CBOR tag (see
+<a href="#cbor-tags-for-cbor-ld"></a>).
+    </p>
+    <p>
+A processing model determines how an implementation transforms a JSON-LD document to and
+from CBOR-LD. Concretely, a processing model specifies:
+    </p>
+    <ul>
+      <li>
+Whether semantic compression is applied (see <a href="#semantic-compression"></a>),
+      </li>
+      <li>
+Which codecs are used for typed-value compression, together with the
+JSON-LD types to which each codec is applied (see <a href="#codecs"></a>).
+      </li>
+    </ul>
+    <p>
+The registry dictionaries used for use-case-specific, typed-value compression are a distinct
+part of a <a>CBOR-LD Registry Entry</a>, configured through its `typeTables` field (see
+<a href="#cbor-ld-registry"></a>). They are selected independently of the processing model
+and are not part of it.
+    </p>
+    <section>
+      <h2>The Default Processing Model</h2>
+      <p>
+A <a>CBOR-LD Registry Entry</a> that does not specify a `processingModel` uses the
+<dfn>default processing model</dfn>. The default processing model is defined by this
+specification and behaves as follows:
+      </p>
+      <ul>
+        <li>
+Semantic compression is enabled. Term identifiers are auto-generated from the JSON-LD
+contexts referenced by the document, as described in <a href="#semantic-compression"></a>
+and specified by the algorithms in <a href="#algorithms"></a>: the compressible terms
+contributed by those contexts are sorted into Unicode code point order and assigned
+consecutive integers, so that a producer and a consumer that start from the same contexts
+derive identical term identifiers.
+        </li>
+        <li>
+Typed values are compressed using the generic codecs defined in <a href="#codecs"></a>,
+including the URL codecs, the `xsd:date` and `xsd:dateTime` codecs, and the multibase
+codec, each applied on the basis of the JSON-LD type associated with a value.
+        </li>
+      </ul>
+      <p>
+Values whose type has no applicable codec or `typeTable` entry, and terms not covered by
+any referenced context, are carried through unchanged, so that any conforming JSON-LD
+document can be round-tripped without loss.
+      </p>
+    </section>
+
+    <section class="normative">
+      <h2>Expressing a Processing Model</h2>
+      <p>
+When present, the `processingModel` member of a <a>CBOR-LD Registry Entry</a> is a map with
+the members defined below. When the member is absent, the <a>default processing model</a>
+applies.
+      </p>
+      <dl>
+        <dt>`semanticCompression`</dt>
+        <dd>
+OPTIONAL. A boolean indicating whether semantic compression is applied to JSON-LD terms. When
+absent, its value is `true`. When `true`, term identifiers are auto-generated as described in
+<a href="#semantic-compression"></a>; this specification does not define any alternative
+term-identifier assignment scheme.
+        </dd>
+        <dt>`codecs`</dt>
+        <dd>
+OPTIONAL. A map from a <dfn>type key</dfn> to a <dfn>codec identifier</dfn>. A type key is
+either a JSON-LD type expressed as an IRI, or one of the reserved keys `url`, which matches
+node references and values whose term is defined with an `@type` of `@id`, and
+`none`, which matches values that have no type. A codec identifier is one of the values listed
+in <a href="#codec-identifiers"></a>. During conversion, the codec bound to a value's type key,
+if any, is used to compress and decompress that value. When `codecs` is absent, no generic
+typed-value codecs are applied.
+        </dd>
+      </dl>
+
+      <section id="codec-identifiers">
+        <h3>Codec Identifiers</h3>
+        <p>
+This specification defines the codec identifiers in the table below. A processing model defined
+by another specification MAY use additional codec identifiers, provided that specification
+defines the corresponding codec.
+        </p>
+        <table class="simple">
+          <thead>
+            <tr>
+              <th>Codec identifier</th>
+              <th>Codec</th>
+              <th>Type key it is bound to in the <a>default processing model</a></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>`url`</td>
+              <td><a href="#url-codec">URL Codec</a></td>
+              <td>`url`</td>
+            </tr>
+            <tr>
+              <td>`xsd-date`</td>
+              <td><a href="#xsd-date-codec">XSD Date Codec</a></td>
+              <td>`http://www.w3.org/2001/XMLSchema#date`</td>
+            </tr>
+            <tr>
+              <td>`xsd-date-time`</td>
+              <td><a href="#xsd-datetime-codec">XSD DateTime Codec</a></td>
+              <td>`http://www.w3.org/2001/XMLSchema#dateTime`</td>
+            </tr>
+            <tr>
+              <td>`multibase`</td>
+              <td><a href="#multibase-codec">Multibase Codec</a></td>
+              <td>`https://w3id.org/security#multibase`</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h3>Example: The Default Processing Model</h3>
+        <p>
+Expressed in this form, the <a>default processing model</a> enables semantic compression and
+binds each codec defined by this specification to the type it compresses:
+        </p>
+        <pre class="example" title="The default processing model, expressed explicitly">
+processingModel:
+  semanticCompression: true
+  codecs:
+    url: url
+    "http://www.w3.org/2001/XMLSchema#date": xsd-date
+    "http://www.w3.org/2001/XMLSchema#dateTime": xsd-date-time
+    "https://w3id.org/security#multibase": multibase
+        </pre>
+        <p>
+Because this is the default, a registry entry MAY omit the `processingModel` member entirely
+and obtain identical behavior.
+        </p>
+      </section>
+
+      <section>
+        <h3>Example: A Custom Processing Model</h3>
+        <p>
+A registry entry can depart from the default. Consider a use case whose documents seldom
+reference external JSON-LD contexts — so semantic compression offers little benefit — but which
+frequently carry timestamps. A processing model for that use case might disable semantic
+compression and enable only the `xsd:dateTime` codec:
+        </p>
+        <pre class="example" title="A processing model with semantic compression disabled">
+processingModel:
+  semanticCompression: false
+  codecs:
+    "http://www.w3.org/2001/XMLSchema#dateTime": xsd-date-time
+        </pre>
+        <p>
+An encoder using this model leaves JSON-LD terms uncompressed while still replacing
+`xsd:dateTime` values with their compact byte encodings. A decoder, having selected the same
+model from the registry entry identifier, inverts exactly those transformations. A custom model
+could equally bind a type to a codec introduced by another specification, or omit `codecs`
+entirely to perform semantic compression alone.
+        </p>
+      </section>
+    </section>
   </section>
 
   <section class="normative">
@@ -531,21 +702,37 @@ for decompression. A <dfn>CBOR-LD Registry Entry</dfn> contains the following:
 `Use Case`: The type of CBOR-LD payload this entry is to be used for.
           </li>
           <li>
-`typeTables`: An array containing the registry dictionaries that are to be used with this
-registry entry.
+`typeTables`: The collection of registry dictionaries used with this registry entry. Each
+registry dictionary is identified by a <dfn>type table type</dfn> and maps values of that
+type to integers for compact encoding. A type table type is either one of the reserved
+categories (`context` which applies to context values or `url` which applies to `@id` typed
+URL values) or a JSON-LD type identifier, in which case the dictionary
+applies to typed-literal values of that type. See <a href="#value-codec"></a> for how these
+dictionaries are selected and applied during encoding and decoding.
           </li>
           <li>
-`processingModel`: what processing model is used for this registry entry. A processing model
+`processingModel`: The <a>processing model</a> used for this registry entry. If this field
+is absent, the registry entry uses the <a>default processing model</a>. A processing model
 specifies the following:
             <ul>
               <li>
-Whether or not semantic compression is used for dynamic JSON-LD term compression,
+whether or not semantic compression is used for dynamic JSON-LD term compression and, when
+it is, how context-based, auto-generated term identifiers are assigned,
               </li>
               <li>
-The codecs used for dynamic typed-value compression.
+the core, generic codecs used for dynamic typed-value compression — for example the codecs
+for URLs, for `xsd:date` and `xsd:dateTime` values, and for multibase-encoded values — and
+the JSON-LD types to which each is applied, and
+              </li>
+              <li>
+any additional conversion behavior a consumer needs in order to process, or to losslessly
+recover the original JSON-LD document from, the CBOR-LD payload.
               </li>
             </ul>
-The `default` processing model uses semantic compression and includes the codecs specified in this document.
+The <a>default processing model</a> uses semantic compression and includes the codecs
+specified in this document. See <a href="#processing-models"></a> for a full description, and
+<a href="#expressing-a-processing-model"></a> for how the `processingModel` member is
+expressed, including a worked example of the default model.
           </li>
           <li>
 `provisional`: a boolean indicating whether the entry is provisional. Provisional entries
