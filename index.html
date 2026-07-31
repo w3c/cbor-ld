@@ -557,18 +557,16 @@ applies.
         <dd>
 OPTIONAL. A boolean indicating whether semantic compression is applied to JSON-LD terms. When
 absent, its value is `true`. When `true`, term identifiers are auto-generated as described in
-<a href="#semantic-compression"></a>; this specification does not define any alternative
-term-identifier assignment scheme.
+<a href="#semantic-compression"></a>.
         </dd>
         <dt>`codecs`</dt>
         <dd>
-OPTIONAL. A map from a <dfn>type key</dfn> to a <dfn>codec identifier</dfn>. A type key is
-either a JSON-LD type expressed as an IRI, or one of the reserved keys `url`, which matches
-node references and values whose term is defined with an `@type` of `@id`, and
-`none`, which matches values that have no type. A codec identifier is one of the values listed
-in <a href="#codec-identifiers"></a>. During conversion, the codec bound to a value's type key,
-if any, is used to compress and decompress that value. When `codecs` is absent, no generic
-typed-value codecs are applied.
+OPTIONAL. A map from a type to a <dfn>codec identifier</dfn>. Here, a type is
+either a JSON-LD type expressed as an IRI the reserved value `url`, which matches
+node references and values whose term is defined with an `@type` of `@id`. During
+conversion, the codec bound to a value's type, if any, is used to compress and decompress
+that value. When `codecs` is absent and the default processing model is not in use,
+no generic typed-value codecs are applied.
         </dd>
       </dl>
 
@@ -584,7 +582,7 @@ defines the corresponding codec.
             <tr>
               <th>Codec identifier</th>
               <th>Codec</th>
-              <th>Type key it is bound to in the <a>default processing model</a></th>
+              <th>Type it is bound to in the <a>default processing model</a></th>
             </tr>
           </thead>
           <tbody>
@@ -618,7 +616,7 @@ defines the corresponding codec.
 Expressed in this form, the <a>default processing model</a> enables semantic compression and
 binds each codec defined by this specification to the type it compresses:
         </p>
-        <pre class="example" title="The default processing model, expressed explicitly">
+        <pre class="example" title="The default processing model">
 processingModel:
   semanticCompression: true
   codecs:
@@ -628,18 +626,17 @@ processingModel:
     "https://w3id.org/security#multibase": multibase
         </pre>
         <p>
-Because this is the default, a registry entry MAY omit the `processingModel` member entirely
+A registry entry MAY omit the `processingModel` member entirely
 and obtain identical behavior.
         </p>
       </section>
-
       <section>
         <h3>Example: A Custom Processing Model</h3>
         <p>
-A registry entry can depart from the default. Consider a use case whose documents seldom
-reference external JSON-LD contexts — so semantic compression offers little benefit — but which
-frequently carry timestamps. A processing model for that use case might disable semantic
-compression and enable only the `xsd:dateTime` codec:
+If a user does not wish semantic compression to be used, or wishes different
+codecs to be used than those in the default processing model, a registry entry can specify a
+custom processing model. The following is an example of a processing model without semantic
+compression and for which only the `xsd-date-time` codec is used:
         </p>
         <pre class="example" title="A processing model with semantic compression disabled">
 processingModel:
@@ -647,12 +644,37 @@ processingModel:
   codecs:
     "http://www.w3.org/2001/XMLSchema#dateTime": xsd-date-time
         </pre>
+      </section>
+      <section>
+        <h3>User-Specified Codecs</h3>
         <p>
-An encoder using this model leaves JSON-LD terms uncompressed while still replacing
-`xsd:dateTime` values with their compact byte encodings. A decoder, having selected the same
-model from the registry entry identifier, inverts exactly those transformations. A custom model
-could equally bind a type to a codec introduced by another specification, or omit `codecs`
-entirely to perform semantic compression alone.
+<a href="#codec-identifiers"></a> lists the codecs defined by this
+specification. CBOR-LD codecs are also intended as an extension point: a processing model MAY
+use codecs that are not specified here, but are instead defined by the
+specification or other document that defines the processing model.
+        </p>
+        <p>
+This specification does
+not constrain how user-specified codecs behave or how they are specified.
+Documents that define a processing model using such codecs are
+responsible for specifying each one precisely enough for interoperable implementation,
+and bear the burden of testing and correctness.
+        </p>
+        <p>
+The following example shows a processing model that uses a codec that compresses IP address
+values of type `https://example.org/vocab#ip-address`
+        </p>
+        <pre class="example" title="A processing model that uses a user-specified codec">
+processingModel:
+  semanticCompression: true
+  codecs:
+    url: url
+    "http://www.w3.org/2001/XMLSchema#dateTime": xsd-date-time
+    "https://example.org/vocab#ip-address": ip-address
+        </pre>
+        <p>
+Where the `ip-address` codec's encoding and decoding behavior is algorithmically specified
+externally.
         </p>
       </section>
     </section>
@@ -893,7 +915,7 @@ to <a href="#convert-document-algorithm"></a>.
           </ol>
           </li>
           <li>
-Otherwise, set `jsonldDocument` to the result of parsing `cborldBytes`.
+Otherwise, set `jsonldDocument` to the result of decoding `suffix` from bytes to a map.
           </li>
           <li>
 Return `jsonldDocument`.
