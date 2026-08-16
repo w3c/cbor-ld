@@ -43,6 +43,7 @@
       includePermalinks:      true,
       doJsonLd:               true,
       pluralize:              true,
+      highlightVars:          true,
 
       // Cross-reference definitions
       xref: ["json-ld11", "json-ld11-api", "json-ld11-framing"],
@@ -2270,58 +2271,58 @@ inversion of this table (i.e., a map from integers to URL prefix strings).
         <section>
           <h4>Create URL Encoder</h4>
           <p>
-This algorithm takes a map <code>state</code>, a map <code>termInfo</code>,
-and a string <code>valueToEncode</code>, and returns either an encoder object
+This algorithm takes a map <var>state</var>, a map <var>termInfo</var>,
+and a string <var>valueToEncode</var>, and returns either an encoder object
 or <code>undefined</code>.
           </p>
           <ol>
             <li>
-If <code>valueToEncode</code> is not a string, throw an
+If <var>valueToEncode</var> is not a string, throw an
 <code>ERR_UNSUPPORTED_JSON_TYPE</code> error.
             </li>
             <li>
-Set <code>termId</code> to the result of looking up
-<code>valueToEncode</code> in <code>state.termToId</code>.
+Set <var>termId</var> to the result of looking up
+<var>valueToEncode</var> in <var>state</var><code>.termToId</code>.
             </li>
             <li>
-If <code>termId</code> is an integer, return an encoder that, when
-invoked via <a href="#encode-url"></a>, encodes <code>termId</code> as
+If <var>termId</var> is an integer, return an encoder that, when
+invoked via <a href="#encode-url"></a>, encodes <var>termId</var> as
 a Major Type 0 (unsigned integer) CBOR item.
             </li>
             <li>
-Attempt to parse <code>valueToEncode</code> as a URL.
+Attempt to parse <var>valueToEncode</var> as a URL.
 If parsing fails (i.e., the value is not a valid URL), return
 <code>undefined</code>.
             </li>
             <li>
-Set <code>prefix</code> to the entry in the <a>URL Prefix Table</a>
-such that <code>valueToEncode</code> starts with <code>prefix</code> and
-the remainder of <code>valueToEncode</code> following <code>prefix</code>
+Set <var>prefix</var> to the entry in the <a>URL Prefix Table</a>
+such that <var>valueToEncode</var> starts with <var>prefix</var> and
+the remainder of <var>valueToEncode</var> following <var>prefix</var>
 does not contain a "<code>:</code>" (U+003A COLON) character. If no such
 entry exists, return <code>undefined</code> (meaning, no compression is
 possible for this URL).
             </li>
             <li>
-If <code>prefix</code> is "<code>https://</code>" or
+If <var>prefix</var> is "<code>https://</code>" or
 "<code>http://</code>", return the result of
 <a href="#create-http-url-encoder"></a> passing
-<code>valueToEncode</code>.
+<var>valueToEncode</var>.
             </li>
             <li>
-If <code>prefix</code> is "<code>urn:uuid:</code>", return the result of
+If <var>prefix</var> is "<code>urn:uuid:</code>", return the result of
 <a href="#create-uuid-urn-encoder"></a> passing
-<code>valueToEncode</code>.
+<var>valueToEncode</var>.
             </li>
             <li>
-If <code>prefix</code> is "<code>data:</code>", return the result of
+If <var>prefix</var> is "<code>data:</code>", return the result of
 <a href="#create-data-url-encoder"></a> passing
-<code>valueToEncode</code>.
+<var>valueToEncode</var>.
             </li>
             <li>
-If <code>prefix</code> is "<code>did:v1:nym:</code>" or
+If <var>prefix</var> is "<code>did:v1:nym:</code>" or
 "<code>did:key:</code>", return the result of
 <a href="#create-base58-did-url-encoder"></a> passing
-<code>valueToEncode</code>.
+<var>valueToEncode</var>.
             </li>
             <li>
 Return <code>undefined</code> (meaning, no compression is possible for this URL).
@@ -2339,7 +2340,7 @@ This algorithm takes an encoder object produced by
             <li>
 If the encoder was created for a term-ID match (step 3 of
 <a href="#create-url-encoder"></a>), return a CBOR encoding of
-<code>termId</code> as a Major Type 0 (unsigned integer) object.
+<var>termId</var> as a Major Type 0 (unsigned integer) object.
             </li>
             <li>
 Otherwise, invoke the <code>encode</code> method of the appropriate
@@ -2351,68 +2352,68 @@ prefix-specific sub-encoder and return the resulting CBOR binary data.
         <section>
           <h4>Create URL Decoder</h4>
           <p>
-This algorithm takes a map <code>state</code>, a map <code>termInfo</code>,
-and a value <code>valueToDecode</code>, and returns a decoder object or
+This algorithm takes a map <var>state</var>, a map <var>termInfo</var>,
+and a value <var>valueToDecode</var>, and returns a decoder object or
 <code>undefined</code>.
           </p>
           <ol>
             <li>
-If <code>valueToDecode</code> is a string, return <code>undefined</code>
+If <var>valueToDecode</var> is a string, return <code>undefined</code>
 (meaning, value is already an uncompressed URL string; pass through).
             </li>
             <li>
-If <code>valueToDecode</code> is an array:
+If <var>valueToDecode</var> is an array:
               <ol>
                 <li>
-Set <code>prefixId</code> to the first element of
-<code>valueToDecode</code>.
+Set <var>prefixId</var> to the first element of
+<var>valueToDecode</var>.
                 </li>
                 <li>
-Set <code>prefix</code> to the value corresponding to <code>prefixId</code>
+Set <var>prefix</var> to the value corresponding to <var>prefixId</var>
 in the <a>URL Prefix Reverse Table</a>.
                 </li>
                 <li>
-If <code>prefix</code> is "<code>http://</code>" or
-"<code>https://</code>", set <code>decoder</code> to the result of
+If <var>prefix</var> is "<code>http://</code>" or
+"<code>https://</code>", set <var>decoder</var> to the result of
 <a href="#create-http-url-decoder"></a> passing
-<code>valueToDecode</code>.
+<var>valueToDecode</var>.
                 </li>
                 <li>
-Otherwise, if <code>prefix</code> is "<code>urn:uuid:</code>", set
-<code>decoder</code> to the result of
+Otherwise, if <var>prefix</var> is "<code>urn:uuid:</code>", set
+<var>decoder</var> to the result of
 <a href="#create-uuid-urn-decoder"></a> passing
-<code>valueToDecode</code>.
+<var>valueToDecode</var>.
                 </li>
                 <li>
-Otherwise, if <code>prefix</code> is "<code>data:</code>", set
-<code>decoder</code> to the result of
+Otherwise, if <var>prefix</var> is "<code>data:</code>", set
+<var>decoder</var> to the result of
 <a href="#create-data-url-decoder"></a> passing
-<code>valueToDecode</code>.
+<var>valueToDecode</var>.
                 </li>
                 <li>
-Otherwise, if <code>prefix</code> is "<code>did:v1:nym:</code>" or
-"<code>did:key:</code>", set <code>decoder</code> to the result of
+Otherwise, if <var>prefix</var> is "<code>did:v1:nym:</code>" or
+"<code>did:key:</code>", set <var>decoder</var> to the result of
 <a href="#create-base58-did-url-decoder"></a> passing
-<code>valueToDecode</code>.
+<var>valueToDecode</var>.
                 </li>
                 <li>
-If <code>prefix</code> did not match any of the above (including when
-<code>prefixId</code> has no entry in the
-<a>URL Prefix Reverse Table</a>), or if <code>decoder</code> is
+If <var>prefix</var> did not match any of the above (including when
+<var>prefixId</var> has no entry in the
+<a>URL Prefix Reverse Table</a>), or if <var>decoder</var> is
 <code>undefined</code> (meaning, the sub-decoder rejected the shape of
-<code>valueToDecode</code>), throw an
+<var>valueToDecode</var>), throw an
 <code>ERR_UNKNOWN_COMPRESSED_VALUE</code> error.
                 </li>
                 <li>
-Return <code>decoder</code>.
+Return <var>decoder</var>.
                 </li>
               </ol>
             </li>
             <li>
-If <code>valueToDecode</code> is an integer, set <code>term</code> to the
-result of looking up <code>valueToDecode</code> in
-<code>state.idToTerm</code> and return a decoder whose
-<a href="#decode-url"></a> invocation returns <code>term</code>.
+If <var>valueToDecode</var> is an integer, set <var>term</var> to the
+result of looking up <var>valueToDecode</var> in
+<var>state</var><code>.idToTerm</code> and return a decoder whose
+<a href="#decode-url"></a> invocation returns <var>term</var>.
             </li>
             <li>
 Return <code>undefined</code>.
@@ -2430,7 +2431,7 @@ This algorithm takes a decoder object produced by
             <li>
 If the decoder was created for an integer term-ID value (step 3 of
 <a href="#create-url-decoder"></a>), return the associated
-<code>term</code> string.
+<var>term</var> string.
             </li>
             <li>
 Otherwise, invoke the <code>decode</code> method of the appropriate
@@ -2446,32 +2447,32 @@ prefix-specific sub-decoder and return the resulting string.
 The HTTP URL Codec handles values whose prefix is
 <code>http://</code> or <code>https://</code>. An encoded HTTP URL is
 represented as a two-element CBOR array
-<code>[prefixId, remainder]</code> where <code>prefixId</code> is the
-integer from the <a>URL Prefix Table</a> and <code>remainder</code> is
+<code>[</code><var>prefixId</var><code>, </code><var>remainder</var><code>]</code> where <var>prefixId</var> is the
+integer from the <a>URL Prefix Table</a> and <var>remainder</var> is
 the prefix-stripped portion of the URL as a text string.
           </p>
 
           <section id="create-http-url-encoder">
             <h5>Create HTTP URL Encoder</h5>
             <p>
-This algorithm takes a string <code>value</code>, and returns an
+This algorithm takes a string <var>value</var>, and returns an
 encoder object or <code>undefined</code>.
             </p>
             <ol>
               <li>
-If <code>value</code> starts with <code>"https://"</code>, set
-<code>prefix</code> to <code>"https://"</code>.
+If <var>value</var> starts with <code>"https://"</code>, set
+<var>prefix</var> to <code>"https://"</code>.
               </li>
               <li>
-Otherwise, if <code>value</code> starts with <code>"http://"</code>, set
-<code>prefix</code> to <code>"http://"</code>.
+Otherwise, if <var>value</var> starts with <code>"http://"</code>, set
+<var>prefix</var> to <code>"http://"</code>.
               </li>
               <li>
 Otherwise, return <code>undefined</code>.
               </li>
               <li>
-Return an encoder object containing <code>value</code> and
-<code>prefix</code>.
+Return an encoder object containing <var>value</var> and
+<var>prefix</var>.
               </li>
             </ol>
           </section>
@@ -2484,16 +2485,16 @@ This algorithm takes an encoder object from
             </p>
             <ol>
               <li>
-Set <code>prefixId</code> to the value of <code>encoderData.prefix</code>
+Set <var>prefixId</var> to the value of <var>encoderData</var><code>.prefix</code>
 in the <a>URL Prefix Table</a>.
               </li>
               <li>
-Set <code>rest</code> to the substring of <code>encoderData.value</code>
-beginning after <code>encoderData.prefix</code>.
+Set <var>rest</var> to the substring of <var>encoderData</var><code>.value</code>
+beginning after <var>encoderData</var><code>.prefix</code>.
               </li>
               <li>
 Return a CBOR encoding of a two-element array
-<code>[prefixId, rest]</code>: Major Type 4 (array) containing a
+<code>[</code><var>prefixId</var><code>, </code><var>rest</var><code>]</code>: Major Type 4 (array) containing a
 Major Type 0 (unsigned integer) item followed by a Major Type 3
 (text string) item.
               </li>
@@ -2503,20 +2504,20 @@ Major Type 0 (unsigned integer) item followed by a Major Type 3
           <section id="create-http-url-decoder">
             <h5>Create HTTP URL Decoder</h5>
             <p>
-This algorithm takes a CBOR array <code>valueToDecode</code>, and
+This algorithm takes a CBOR array <var>valueToDecode</var>, and
 returns a decoder object or <code>undefined</code>.
             </p>
             <ol>
               <li>
-If <code>valueToDecode</code> has exactly two elements and the second
+If <var>valueToDecode</var> has exactly two elements and the second
 element is a text string:
                 <ol>
                   <li>
-Set <code>prefix</code> to the value of <code>valueToDecode[0]</code>
+Set <var>prefix</var> to the value of <var>valueToDecode</var><code>[0]</code>
 in the <a>URL Prefix Reverse Table</a>.
                   </li>
                   <li>
-Return a decoder object containing <code>prefix</code>.
+Return a decoder object containing <var>prefix</var>.
                   </li>
                 </ol>
               </li>
@@ -2531,12 +2532,12 @@ Otherwise, return <code>undefined</code>.
             <p>
 This algorithm takes a decoder object from
 <a href="#create-http-url-decoder"></a> and a CBOR array
-<code>valueToDecode</code>, and returns a string.
+<var>valueToDecode</var>, and returns a string.
             </p>
             <ol>
               <li>
-Return the concatenation of <code>decoderData.prefix</code> and
-<code>valueToDecode[1]</code>.
+Return the concatenation of <var>decoderData</var><code>.prefix</code> and
+<var>valueToDecode</var><code>[1]</code>.
               </li>
             </ol>
           </section>
@@ -2548,7 +2549,7 @@ Return the concatenation of <code>decoderData.prefix</code> and
           <p>
 The UUID URN Codec handles values whose prefix is
 <code>urn:uuid:</code>. An encoded UUID URN is a two-element CBOR array
-<code>[3, uuidValue]</code> where <code>uuidValue</code> is either a
+<code>[3, </code><var>uuidValue</var><code>]</code> where <var>uuidValue</var> is either a
 16-byte Major Type 2 (byte string) representing the UUID in binary form
 (when the UUID string is all lowercase), or a Major Type 3 (text string)
 containing the UUID value verbatim (when the casing cannot be
@@ -2558,16 +2559,16 @@ round-tripped through binary form).
           <section>
             <h5>Create UUID URN Encoder</h5>
             <p>
-This algorithm takes a string <code>value</code>, and returns an encoder
+This algorithm takes a string <var>value</var>, and returns an encoder
 object or <code>undefined</code>.
             </p>
             <ol>
               <li>
-If <code>value</code> does not start with <code>"urn:uuid:"</code>,
+If <var>value</var> does not start with <code>"urn:uuid:"</code>,
 return <code>undefined</code>.
               </li>
               <li>
-Return an encoder object containing <code>value</code>.
+Return an encoder object containing <var>value</var>.
               </li>
             </ol>
           </section>
@@ -2579,26 +2580,26 @@ This algorithm takes an encoder object, and returns CBOR binary data.
             </p>
             <ol>
               <li>
-Set <code>prefixId</code> to <code>3</code> (the entry for
+Set <var>prefixId</var> to <code>3</code> (the entry for
 <code>"urn:uuid:"</code> in the <a>URL Prefix Table</a>).
               </li>
               <li>
-Set <code>rest</code> to the substring of <code>encoderData.value</code>
+Set <var>rest</var> to the substring of <var>encoderData</var><code>.value</code>
 beginning after <code>"urn:uuid:"</code>.
               </li>
               <li>
-If <code>rest</code> contains no uppercase characters (i.e., it is
+If <var>rest</var> contains no uppercase characters (i.e., it is
 equal to its lowercase form):
                 <ol>
                   <li>
-Set <code>uuidBytes</code> to the 16-byte binary representation of the
-UUID obtained by parsing <code>rest</code> according to
-[[RFC4122]]. If <code>rest</code> cannot be parsed as a valid UUID, an
+Set <var>uuidBytes</var> to the 16-byte binary representation of the
+UUID obtained by parsing <var>rest</var> according to
+[[RFC4122]]. If <var>rest</var> cannot be parsed as a valid UUID, an
 error is thrown and encoding fails.
                   </li>
                   <li>
 Return a CBOR encoding of a two-element array
-<code>[3, uuidBytes]</code>: Major Type 4 (array) containing a
+<code>[3, </code><var>uuidBytes</var><code>]</code>: Major Type 4 (array) containing a
 Major Type 0 (unsigned integer) item followed by a Major Type 2
 (byte string) item of length 16.
                   </li>
@@ -2606,7 +2607,7 @@ Major Type 0 (unsigned integer) item followed by a Major Type 2
               </li>
               <li>
 Otherwise, return a CBOR encoding of a two-element array
-<code>[3, rest]</code>: Major Type 4 (array) containing a
+<code>[3, </code><var>rest</var><code>]</code>: Major Type 4 (array) containing a
 Major Type 0 (unsigned integer) item followed by a Major Type 3
 (text string) item.
               </li>
@@ -2616,12 +2617,12 @@ Major Type 0 (unsigned integer) item followed by a Major Type 3
           <section id="create-uuid-urn-decoder">
             <h5>Create UUID URN Decoder</h5>
             <p>
-This algorithm takes a CBOR array <code>valueToDecode</code>, and returns
+This algorithm takes a CBOR array <var>valueToDecode</var>, and returns
 a decoder object or <code>undefined</code>.
             </p>
             <ol>
               <li>
-If <code>valueToDecode</code> has exactly two elements, and the second
+If <var>valueToDecode</var> has exactly two elements, and the second
 element is either a byte string or a text string, return a decoder object.
               </li>
               <li>
@@ -2634,21 +2635,21 @@ Otherwise, return <code>undefined</code>.
             <h5>Decode UUID URN</h5>
             <p>
 This algorithm takes a decoder object and a CBOR array
-<code>valueToDecode</code>, and returns a string.
+<var>valueToDecode</var>, and returns a string.
             </p>
             <ol>
               <li>
-If <code>valueToDecode[1]</code> is a text string, set <code>uuid</code>
-to <code>valueToDecode[1]</code>.
+If <var>valueToDecode</var><code>[1]</code> is a text string, set <var>uuid</var>
+to <var>valueToDecode</var><code>[1]</code>.
               </li>
               <li>
-Otherwise, set <code>uuid</code> to the UUID string representation of the
-16-byte binary value <code>valueToDecode[1]</code> per [[RFC4122]]
+Otherwise, set <var>uuid</var> to the UUID string representation of the
+16-byte binary value <var>valueToDecode</var><code>[1]</code> per [[RFC4122]]
 (lowercase, hyphen-delimited form).
               </li>
               <li>
 Return the concatenation of <code>"urn:uuid:"</code> and
-<code>uuid</code>.
+<var>uuid</var>.
               </li>
             </ol>
           </section>
@@ -2662,46 +2663,46 @@ The Data URL Codec handles values whose prefix is
 <code>data:</code> (data URLs, as defined in [[RFC2397]]). Base64-encoded data URLs
 (matching <code>data:&lt;mediatype&gt;;base64,&lt;data&gt;</code>) are
 encoded as a three-element CBOR array
-<code>[4, mediatype, dataBytes]</code>. Non-base64 data URLs are encoded
-as a two-element CBOR array <code>[4, rest]</code> where
-<code>rest</code> is the portion of the URL after <code>"data:"</code>.
+<code>[4, </code><var>mediatype</var><code>, </code><var>dataBytes</var><code>]</code>. Non-base64 data URLs are encoded
+as a two-element CBOR array <code>[4, </code><var>rest</var><code>]</code> where
+<var>rest</var> is the portion of the URL after <code>"data:"</code>.
           </p>
 
           <section id="create-data-url-encoder">
             <h5>Create Data URL Encoder</h5>
             <p>
-This algorithm takes a string <code>value</code>, and returns an encoder
+This algorithm takes a string <var>value</var>, and returns an encoder
 object or <code>undefined</code>.
             </p>
             <ol>
               <li>
-If <code>value</code> does not start with <code>"data:"</code>, return
+If <var>value</var> does not start with <code>"data:"</code>, return
 <code>undefined</code>.
               </li>
               <li>
-Attempt to match <code>value</code> against the regular expression
+Attempt to match <var>value</var> against the regular expression
 <code>^data:(?&lt;mediatype&gt;.*);base64,(?&lt;data&gt;.*)$</code>,
 where each <code>.*</code> is greedy (i.e., if the string
 "<code>;base64,</code>" occurs more than once, the
-<code>mediatype</code> group extends to the last occurrence).
+<var>mediatype</var> group extends to the last occurrence).
               </li>
               <li>
 If the match succeeds:
                 <ol>
                   <li>
-Set <code>data</code> to the value of the <code>data</code> capture
+Set <var>data</var> to the value of the <var>data</var> capture
 group.
                   </li>
                   <li>
-Verify round-trip integrity: decode <code>data</code> from base64 and
-re-encode to base64. If the result equals <code>data</code>, return an
-encoder object with <code>value</code> and <code>base64</code> set to
+Verify round-trip integrity: decode <var>data</var> from base64 and
+re-encode to base64. If the result equals <var>data</var>, return an
+encoder object with <var>value</var> and <code>base64</code> set to
 <code>true</code>.
                   </li>
                 </ol>
               </li>
               <li>
-Return an encoder object with <code>value</code> and <code>base64</code>
+Return an encoder object with <var>value</var> and <code>base64</code>
 set to <code>false</code>.
               </li>
             </ol>
@@ -2715,21 +2716,21 @@ This algorithm takes an encoder object from
             </p>
             <ol>
               <li>
-Set <code>prefixId</code> to <code>4</code> (the entry for
+Set <var>prefixId</var> to <code>4</code> (the entry for
 <code>"data:"</code> in the <a>URL Prefix Table</a>).
               </li>
               <li>
-If <code>encoderData.base64</code> is <code>true</code>:
+If <var>encoderData</var><code>.base64</code> is <code>true</code>:
                 <ol>
                   <li>
-Parse <code>encoderData.value</code> to extract <code>mediatype</code>
+Parse <var>encoderData</var><code>.value</code> to extract <var>mediatype</var>
 (the substring between <code>"data:"</code> and <code>";base64,"</code>)
-and <code>dataBytes</code> (the binary decoding of the base64 data
+and <var>dataBytes</var> (the binary decoding of the base64 data
 portion).
                   </li>
                   <li>
 Return a CBOR encoding of a three-element array
-<code>[prefixId, mediatype, dataBytes]</code>: Major Type 4 (array)
+<code>[</code><var>prefixId</var><code>, </code><var>mediatype</var><code>, </code><var>dataBytes</var><code>]</code>: Major Type 4 (array)
 containing a Major Type 0 integer, a Major Type 3 text string, and a
 Major Type 2 byte string.
                   </li>
@@ -2739,12 +2740,12 @@ Major Type 2 byte string.
 Otherwise:
                 <ol>
                   <li>
-Set <code>rest</code> to the substring of <code>encoderData.value</code>
+Set <var>rest</var> to the substring of <var>encoderData</var><code>.value</code>
 beginning after <code>"data:"</code>.
                   </li>
                   <li>
 Return a CBOR encoding of a two-element array
-<code>[prefixId, rest]</code>: Major Type 4 (array) containing a
+<code>[</code><var>prefixId</var><code>, </code><var>rest</var><code>]</code>: Major Type 4 (array) containing a
 Major Type 0 integer and a Major Type 3 text string.
                   </li>
                 </ol>
@@ -2755,17 +2756,17 @@ Major Type 0 integer and a Major Type 3 text string.
           <section id="create-data-url-decoder">
             <h5>Create Data URL Decoder</h5>
             <p>
-This algorithm takes a CBOR array <code>valueToDecode</code>, and returns
+This algorithm takes a CBOR array <var>valueToDecode</var>, and returns
 a decoder object or <code>undefined</code>.
             </p>
             <ol>
               <li>
-If <code>valueToDecode</code> has exactly three elements, the second
+If <var>valueToDecode</var> has exactly three elements, the second
 element is a text string, and the third element is a byte string, return
 a decoder object (base64 mode).
               </li>
               <li>
-Otherwise, if <code>valueToDecode</code> has exactly two elements and
+Otherwise, if <var>valueToDecode</var> has exactly two elements and
 the second element is a text string, return a decoder object
 (non-base64 mode).
               </li>
@@ -2779,29 +2780,29 @@ Otherwise, return <code>undefined</code>.
             <h5>Decode Data URL</h5>
             <p>
 This algorithm takes a decoder object and a CBOR array
-<code>valueToDecode</code>, and returns a string.
+<var>valueToDecode</var>, and returns a string.
             </p>
             <ol>
               <li>
-If <code>valueToDecode</code> has three elements (base64 mode):
+If <var>valueToDecode</var> has three elements (base64 mode):
                 <ol>
                   <li>
-Set <code>mediatype</code> to <code>valueToDecode[1]</code>.
+Set <var>mediatype</var> to <var>valueToDecode</var><code>[1]</code>.
                   </li>
                   <li>
-Set <code>encodedData</code> to the base64 encoding of the byte string
-<code>valueToDecode[2]</code>.
+Set <var>encodedData</var> to the base64 encoding of the byte string
+<var>valueToDecode</var><code>[2]</code>.
                   </li>
                   <li>
 Return the concatenation of <code>"data:"</code>,
-<code>mediatype</code>, <code>";base64,"</code>, and
-<code>encodedData</code>.
+<var>mediatype</var>, <code>";base64,"</code>, and
+<var>encodedData</var>.
                   </li>
                 </ol>
               </li>
               <li>
 Otherwise (non-base64 mode), return the concatenation of
-<code>"data:"</code> and <code>valueToDecode[1]</code>.
+<code>"data:"</code> and <var>valueToDecode</var><code>[1]</code>.
               </li>
             </ol>
           </section>
@@ -2816,8 +2817,8 @@ The Base58 DID URL Codec handles DID URLs whose prefix is
 authority (and optional fragment) components are typically multibase
 base58btc-encoded strings (those starting with the character
 <code>'z'</code>). A compressed DID URL is encoded as a two- or
-three-element CBOR array <code>[prefixId, authority]</code> or
-<code>[prefixId, authority, fragment]</code>. When a component starts
+three-element CBOR array <code>[</code><var>prefixId</var><code>, </code><var>authority</var><code>]</code> or
+<code>[</code><var>prefixId</var><code>, </code><var>authority</var><code>, </code><var>fragment</var><code>]</code>. When a component starts
 with <code>'z'</code> and is valid base58btc, it is stored as a raw byte
 string; otherwise it is stored as a text string.
           </p>
@@ -2831,19 +2832,19 @@ The <a>URL Prefix Table</a> entries used by this codec are
           <section id="create-base58-did-url-encoder">
             <h5>Create Base58 DID URL Encoder</h5>
             <p>
-This algorithm takes a string <code>value</code>, and returns an
+This algorithm takes a string <var>value</var>, and returns an
 encoder object or <code>undefined</code>.
             </p>
             <ol>
               <li>
-For each <code>[prefix, prefixId]</code> pair in the
+For each <code>[</code><var>prefix</var><code>, </code><var>prefixId</var><code>]</code> pair in the
 <a>URL Prefix Table</a> where the prefix starts with
 <code>"did:"</code>:
                 <ol>
                   <li>
-If <code>value</code> starts with <code>prefix</code>, return an encoder
-object containing <code>value</code>, <code>prefix</code>, and
-<code>prefixId</code>.
+If <var>value</var> starts with <var>prefix</var>, return an encoder
+object containing <var>value</var>, <var>prefix</var>, and
+<var>prefixId</var>.
                   </li>
                 </ol>
               </li>
@@ -2862,38 +2863,38 @@ data.
             </p>
             <ol>
               <li>
-Set <code>suffix</code> to the substring of <code>encoderData.value</code>
-beginning after <code>encoderData.prefix</code>.
+Set <var>suffix</var> to the substring of <var>encoderData</var><code>.value</code>
+beginning after <var>encoderData</var><code>.prefix</code>.
               </li>
               <li>
-Split <code>suffix</code> on the first occurrence of <code>'#'</code>
-to produce <code>authority</code> and, if present,
-<code>fragment</code>.
+Split <var>suffix</var> on the first occurrence of <code>'#'</code>
+to produce <var>authority</var> and, if present,
+<var>fragment</var>.
               </li>
               <li>
-Set <code>authorityEncoded</code> to the result of applying the
+Set <var>authorityEncoded</var> to the result of applying the
 <a>Multibase Base58 to CBOR Token</a> algorithm to
-<code>authority</code>.
+<var>authority</var>.
               </li>
               <li>
-Initialize <code>entries</code> to
-<code>[encoderData.prefixId, authorityEncoded]</code>.
+Initialize <var>entries</var> to
+<code>[</code><var>encoderData</var><code>.prefixId, </code><var>authorityEncoded</var><code>]</code>.
               </li>
               <li>
-If <code>fragment</code> is defined:
+If <var>fragment</var> is defined:
                 <ol>
                   <li>
-Set <code>fragmentEncoded</code> to the result of applying the
+Set <var>fragmentEncoded</var> to the result of applying the
 <a>Multibase Base58 to CBOR Token</a> algorithm to
-<code>fragment</code>.
+<var>fragment</var>.
                   </li>
                   <li>
-Append <code>fragmentEncoded</code> to <code>entries</code>.
+Append <var>fragmentEncoded</var> to <var>entries</var>.
                   </li>
                 </ol>
               </li>
               <li>
-Return a CBOR encoding of <code>entries</code> as a Major Type 4
+Return a CBOR encoding of <var>entries</var> as a Major Type 4
 (array).
               </li>
             </ol>
@@ -2903,26 +2904,26 @@ Return a CBOR encoding of <code>entries</code> as a Major Type 4
             <h5>Multibase Base58 to CBOR Token</h5>
             <p>
 The <dfn>Multibase Base58 to CBOR Token</dfn> algorithm takes a string
-<code>str</code> and returns either a Major Type 2 (byte string) CBOR
+<var>str</var> and returns either a Major Type 2 (byte string) CBOR
 token (if the value is a base58btc multibase string) or a Major Type 3
 (text string) CBOR token.
             </p>
             <ol>
               <li>
-If <code>str</code> starts with <code>'z'</code>:
+If <var>str</var> starts with <code>'z'</code>:
                 <ol>
                   <li>
-Set <code>decoded</code> to the result of decoding the base58btc content
-of <code>str</code> (i.e. <code>str[1:]</code>).
+Set <var>decoded</var> to the result of decoding the base58btc content
+of <var>str</var> (i.e. <var>str</var><code>[1:]</code>).
                   </li>
                   <li>
 If decoding succeeds, return a Major Type 2 (byte string) CBOR token
-for <code>decoded</code>.
+for <var>decoded</var>.
                   </li>
                 </ol>
               </li>
               <li>
-Return a Major Type 3 (text string) CBOR token for <code>str</code>.
+Return a Major Type 3 (text string) CBOR token for <var>str</var>.
               </li>
             </ol>
           </section>
@@ -2930,19 +2931,19 @@ Return a Major Type 3 (text string) CBOR token for <code>str</code>.
           <section id="create-base58-did-url-decoder">
             <h5>Create Base58 DID URL Decoder</h5>
             <p>
-This algorithm takes a CBOR array <code>valueToDecode</code>, and returns
+This algorithm takes a CBOR array <var>valueToDecode</var>, and returns
 a decoder object or <code>undefined</code>.
             </p>
             <ol>
               <li>
-If <code>valueToDecode</code> has exactly two or three elements:
+If <var>valueToDecode</var> has exactly two or three elements:
                 <ol>
                   <li>
-Set <code>prefix</code> to the value of <code>valueToDecode[0]</code>
+Set <var>prefix</var> to the value of <var>valueToDecode</var><code>[0]</code>
 in the <a>URL Prefix Reverse Table</a>.
                   </li>
                   <li>
-Return a decoder object containing <code>prefix</code>.
+Return a decoder object containing <var>prefix</var>.
                   </li>
                 </ol>
               </li>
@@ -2957,36 +2958,36 @@ Otherwise, return <code>undefined</code>.
             <p>
 This algorithm takes a decoder object from
 <a href="#create-base58-did-url-decoder"></a> and a CBOR array
-<code>valueToDecode</code>, and returns a string.
+<var>valueToDecode</var>, and returns a string.
             </p>
             <ol>
               <li>
-Set <code>url</code> to <code>decoderData.prefix</code>.
+Set <var>url</var> to <var>decoderData</var><code>.prefix</code>.
               </li>
               <li>
-If <code>valueToDecode[1]</code> is a byte string, append
+If <var>valueToDecode</var><code>[1]</code> is a byte string, append
 <code>'z'</code> followed by the base58btc encoding of
-<code>valueToDecode[1]</code> to <code>url</code>.
+<var>valueToDecode</var><code>[1]</code> to <var>url</var>.
               </li>
               <li>
-Otherwise, append <code>valueToDecode[1]</code> to <code>url</code>.
+Otherwise, append <var>valueToDecode</var><code>[1]</code> to <var>url</var>.
               </li>
               <li>
-If <code>valueToDecode</code> has more than two elements:
+If <var>valueToDecode</var> has more than two elements:
                 <ol>
                   <li>
-If <code>valueToDecode[2]</code> is a byte string, append
+If <var>valueToDecode</var><code>[2]</code> is a byte string, append
 <code>"#z"</code> followed by the base58btc encoding of
-<code>valueToDecode[2]</code> to <code>url</code>.
+<var>valueToDecode</var><code>[2]</code> to <var>url</var>.
                   </li>
                   <li>
 Otherwise, append <code>"#"</code> followed by
-<code>valueToDecode[2]</code> to <code>url</code>.
+<var>valueToDecode</var><code>[2]</code> to <var>url</var>.
                   </li>
                 </ol>
               </li>
               <li>
-Return <code>url</code>.
+Return <var>url</var>.
               </li>
             </ol>
           </section>
@@ -3016,28 +3017,28 @@ by this codec.
         <section>
           <h4>Create XSD Date Encoder</h4>
           <p>
-This algorithm takes a string <code>value</code>, and returns an encoder
+This algorithm takes a string <var>value</var>, and returns an encoder
 object or <code>undefined</code>.
           </p>
           <ol>
             <li>
-If <code>value</code> contains the character <code>'T'</code> (indicating
+If <var>value</var> contains the character <code>'T'</code> (indicating
 a time component), return <code>undefined</code> (this value is
 compressed instead by the <a href="#xsd-datetime-codec">XSD DateTime
 Codec</a>).
             </li>
             <li>
-Set <code>parsed</code> to the result of parsing <code>value</code> as
+Set <var>parsed</var> to the result of parsing <var>value</var> as
 an ISO 8601 date string, expressed as the number of milliseconds since
 the Unix epoch.
             </li>
             <li>
-If <code>parsed</code> is not a valid number, return
+If <var>parsed</var> is not a valid number, return
 <code>undefined</code>.
             </li>
             <li>
-Return an encoder object containing <code>value</code> and
-<code>parsed</code>.
+Return an encoder object containing <var>value</var> and
+<var>parsed</var>.
             </li>
           </ol>
         </section>
@@ -3050,33 +3051,33 @@ This algorithm takes an encoder object from
           </p>
           <ol>
             <li>
-Set <code>secondsSinceEpoch</code> to
-<code>floor(encoderData.parsed / 1000)</code>.
+Set <var>secondsSinceEpoch</var> to
+<code>floor(</code><var>encoderData</var><code>.parsed / 1000)</code>.
             </li>
             <li>
-Set <code>reconstituted</code> to the ISO 8601 string for the instant
-<code>secondsSinceEpoch × 1000</code> milliseconds since the Unix
+Set <var>reconstituted</var> to the ISO 8601 string for the instant
+<var>secondsSinceEpoch</var><code> × 1000</code> milliseconds since the Unix
 epoch.
             </li>
             <li>
-Set <code>expectedDate</code> to the substring of
-<code>reconstituted</code> preceding the first occurrence of
+Set <var>expectedDate</var> to the substring of
+<var>reconstituted</var> preceding the first occurrence of
 <code>'T'</code>.
             </li>
             <li>
-If <code>encoderData.value</code> is not equal to
-<code>expectedDate</code>, the compression would be lossy. Return a CBOR
-encoding of <code>encoderData.value</code> as a Major Type 3 (text
+If <var>encoderData</var><code>.value</code> is not equal to
+<var>expectedDate</var>, the compression would be lossy. Return a CBOR
+encoding of <var>encoderData</var><code>.value</code> as a Major Type 3 (text
 string) object.
             </li>
             <li>
-If <code>secondsSinceEpoch</code> is greater than or equal to
+If <var>secondsSinceEpoch</var> is greater than or equal to
 <code>0</code>, return a CBOR encoding of
-<code>secondsSinceEpoch</code> as a Major Type 0 (unsigned integer)
+<var>secondsSinceEpoch</var> as a Major Type 0 (unsigned integer)
 object.
             </li>
             <li>
-Otherwise, return a CBOR encoding of <code>secondsSinceEpoch</code>
+Otherwise, return a CBOR encoding of <var>secondsSinceEpoch</var>
 as a Major Type 1 (negative integer) object.
             </li>
           </ol>
@@ -3085,12 +3086,12 @@ as a Major Type 1 (negative integer) object.
         <section>
           <h4>Create XSD Date Decoder</h4>
           <p>
-This algorithm takes a value <code>valueToDecode</code>, and returns a
+This algorithm takes a value <var>valueToDecode</var>, and returns a
 decoder object or <code>undefined</code>.
           </p>
           <ol>
             <li>
-If <code>valueToDecode</code> is an integer (positive, negative, or
+If <var>valueToDecode</var> is an integer (positive, negative, or
 zero), return a decoder object.
             </li>
             <li>
@@ -3103,15 +3104,15 @@ Otherwise, return <code>undefined</code>.
           <h4>Decode XSD Date</h4>
           <p>
 This algorithm takes a decoder object and an integer value
-<code>value</code>, and returns a string.
+<var>value</var>, and returns a string.
           </p>
           <ol>
             <li>
-Set <code>dateString</code> to the ISO 8601 string for the instant
-<code>value * 1000</code> milliseconds since the Unix epoch.
+Set <var>dateString</var> to the ISO 8601 string for the instant
+<var>value</var><code> * 1000</code> milliseconds since the Unix epoch.
             </li>
             <li>
-Return the substring of <code>dateString</code> preceding the first
+Return the substring of <var>dateString</var> preceding the first
 occurrence of <code>'T'</code>.
             </li>
           </ol>
@@ -3124,8 +3125,8 @@ The XSD DateTime Codec compresses values whose type is
 <code>http://www.w3.org/2001/XMLSchema#dateTime</code>. Second-precision
 datetime values are encoded as a single integer count of seconds since
 the Unix epoch (Major Type 0 or 1). Sub-second-precision datetime values
-are encoded as a two-element CBOR array <code>[seconds,
-milliseconds]</code>, both as Major Type 0 integers. As with the XSD
+are encoded as a two-element CBOR array <code>[</code><var>seconds</var><code>,
+</code><var>milliseconds</var><code>]</code>, both as Major Type 0 integers. As with the XSD
 Date Codec, the value is only compressed if the compression is lossless
 (the original string round-trips through the encoding exactly).
         </p>
@@ -3133,27 +3134,27 @@ Date Codec, the value is only compressed if the compression is lossless
         <section>
           <h4>Create XSD DateTime Encoder</h4>
           <p>
-This algorithm takes a string <code>value</code>, and returns an encoder
+This algorithm takes a string <var>value</var>, and returns an encoder
 object or <code>undefined</code>.
           </p>
           <ol>
             <li>
-If <code>value</code> does not contain the character <code>'T'</code>,
+If <var>value</var> does not contain the character <code>'T'</code>,
 return <code>undefined</code> (this value is compressed instead by the
 <a href="#xsd-date-codec">XSD Date Codec</a>).
             </li>
             <li>
-Set <code>parsed</code> to the result of parsing <code>value</code> as an
+Set <var>parsed</var> to the result of parsing <var>value</var> as an
 ISO 8601 datetime string, expressed as the number of milliseconds since
 the Unix epoch.
             </li>
             <li>
-If <code>parsed</code> is not a valid number, return
+If <var>parsed</var> is not a valid number, return
 <code>undefined</code>.
             </li>
             <li>
-Return an encoder object containing <code>value</code> and
-<code>parsed</code>.
+Return an encoder object containing <var>value</var> and
+<var>parsed</var>.
             </li>
           </ol>
         </section>
@@ -3167,33 +3168,33 @@ data.
           </p>
           <ol>
             <li>
-Set <code>secondsSinceEpoch</code> to
-<code>floor(encoderData.parsed / 1000)</code>.
+Set <var>secondsSinceEpoch</var> to
+<code>floor(</code><var>encoderData</var><code>.parsed / 1000)</code>.
             </li>
             <li>
-If <code>encoderData.value</code> does not contain the character
+If <var>encoderData</var><code>.value</code> does not contain the character
 <code>'.'</code> (no millisecond component):
               <ol>
                 <li>
-Set <code>expectedDate</code> to the ISO 8601 string for the instant
-<code>secondsSinceEpoch * 1000</code> milliseconds since the Unix
+Set <var>expectedDate</var> to the ISO 8601 string for the instant
+<var>secondsSinceEpoch</var><code> * 1000</code> milliseconds since the Unix
 epoch, with the substring <code>".000Z"</code> replaced by
 <code>"Z"</code>.
                 </li>
                 <li>
-If <code>encoderData.value</code> is not equal to
-<code>expectedDate</code>, the compression would be lossy. Return a
-CBOR encoding of <code>encoderData.value</code> as a Major Type 3
+If <var>encoderData</var><code>.value</code> is not equal to
+<var>expectedDate</var>, the compression would be lossy. Return a
+CBOR encoding of <var>encoderData</var><code>.value</code> as a Major Type 3
 (text string) object.
                 </li>
                 <li>
-If <code>secondsSinceEpoch</code> is greater than or equal to
+If <var>secondsSinceEpoch</var> is greater than or equal to
 <code>0</code>, return a CBOR encoding of
-<code>secondsSinceEpoch</code> as a Major Type 0 (unsigned integer)
+<var>secondsSinceEpoch</var> as a Major Type 0 (unsigned integer)
 object.
                 </li>
                 <li>
-Otherwise, return a CBOR encoding of <code>secondsSinceEpoch</code> as
+Otherwise, return a CBOR encoding of <var>secondsSinceEpoch</var> as
 a Major Type 1 (negative integer) object.
                 </li>
               </ol>
@@ -3202,28 +3203,28 @@ a Major Type 1 (negative integer) object.
 Otherwise (millisecond component is present):
               <ol>
                 <li>
-Set <code>millisecondIndex</code> to the index of the first
-<code>'.'</code> in <code>encoderData.value</code>.
+Set <var>millisecondIndex</var> to the index of the first
+<code>'.'</code> in <var>encoderData</var><code>.value</code>.
                 </li>
                 <li>
-Set <code>milliseconds</code> to the integer value of the digits of
-<code>encoderData.value</code> beginning at position
-<code>millisecondIndex + 1</code>.
+Set <var>milliseconds</var> to the integer value of the digits of
+<var>encoderData</var><code>.value</code> beginning at position
+<var>millisecondIndex</var><code> + 1</code>.
                 </li>
                 <li>
-Set <code>expectedDate</code> to the ISO 8601 string for the instant
-<code>secondsSinceEpoch * 1000 + milliseconds</code> milliseconds
+Set <var>expectedDate</var> to the ISO 8601 string for the instant
+<var>secondsSinceEpoch</var><code> * 1000 + </code><var>milliseconds</var> milliseconds
 since the Unix epoch.
                 </li>
                 <li>
-If <code>encoderData.value</code> is not equal to
-<code>expectedDate</code>, the compression would be lossy. Return a
-CBOR encoding of <code>encoderData.value</code> as a Major Type 3
+If <var>encoderData</var><code>.value</code> is not equal to
+<var>expectedDate</var>, the compression would be lossy. Return a
+CBOR encoding of <var>encoderData</var><code>.value</code> as a Major Type 3
 (text string) object.
                 </li>
                 <li>
 Return a CBOR encoding of the two-element array
-<code>[secondsSinceEpoch, milliseconds]</code>: Major Type 4 (array)
+<code>[</code><var>secondsSinceEpoch</var><code>, </code><var>milliseconds</var><code>]</code>: Major Type 4 (array)
 containing two Major Type 0 (unsigned integer) items.
                 </li>
               </ol>
@@ -3234,15 +3235,15 @@ containing two Major Type 0 (unsigned integer) items.
         <section>
           <h4>Create XSD DateTime Decoder</h4>
           <p>
-This algorithm takes a value <code>valueToDecode</code>, and returns a
+This algorithm takes a value <var>valueToDecode</var>, and returns a
 decoder object or <code>undefined</code>.
           </p>
           <ol>
             <li>
-If <code>valueToDecode</code> is an integer, return a decoder object.
+If <var>valueToDecode</var> is an integer, return a decoder object.
             </li>
             <li>
-If <code>valueToDecode</code> is an array of exactly two elements where
+If <var>valueToDecode</var> is an array of exactly two elements where
 both elements are numbers, return a decoder object.
             </li>
             <li>
@@ -3254,36 +3255,36 @@ Otherwise, return <code>undefined</code>.
         <section>
           <h4>Decode XSD DateTime</h4>
           <p>
-This algorithm takes a decoder object and a value <code>value</code>
+This algorithm takes a decoder object and a value <var>value</var>
 (either an integer or a two-element array of integers), and returns a
 string.
           </p>
           <ol>
             <li>
-If <code>value</code> is an integer:
+If <var>value</var> is an integer:
               <ol>
                 <li>
-Set <code>instantMs</code> to <code>value * 1000</code>.
+Set <var>instantMs</var> to <var>value</var><code> * 1000</code>.
                 </li>
                 <li>
-Set <code>dateString</code> to the ISO 8601 string for the instant
-<code>instantMs</code> milliseconds since the Unix epoch.
+Set <var>dateString</var> to the ISO 8601 string for the instant
+<var>instantMs</var> milliseconds since the Unix epoch.
                 </li>
                 <li>
-Return <code>dateString</code> with the substring <code>".000Z"</code>
+Return <var>dateString</var> with the substring <code>".000Z"</code>
 replaced by <code>"Z"</code>.
                 </li>
               </ol>
             </li>
             <li>
-Otherwise (<code>value</code> is a two-element array):
+Otherwise (<var>value</var> is a two-element array):
               <ol>
                 <li>
-Set <code>instantMs</code> to
-<code>value[0] * 1000 + value[1]</code>.
+Set <var>instantMs</var> to
+<var>value</var><code>[0] * 1000 + </code><var>value</var><code>[1]</code>.
                 </li>
                 <li>
-Return <code>instantMs</code>.
+Return <var>instantMs</var>.
                 </li>
               </ol>
             </li>
@@ -3333,17 +3334,17 @@ The following multibase encodings are supported:
         <section>
           <h4>Create Multibase Encoder</h4>
           <p>
-This algorithm takes a value <code>value</code>, and returns an encoder
+This algorithm takes a value <var>value</var>, and returns an encoder
 object or <code>undefined</code>.
           </p>
           <ol>
             <li>
-If <code>value</code> is not a string, return <code>undefined</code>.
+If <var>value</var> is not a string, return <code>undefined</code>.
             </li>
             <li>
-If the first character of <code>value</code> is <code>'z'</code>,
+If the first character of <var>value</var> is <code>'z'</code>,
 <code>'u'</code>, or <code>'M'</code>, return an encoder object
-containing <code>value</code>.
+containing <var>value</var>.
             </li>
             <li>
 Otherwise, return <code>undefined</code> (unsupported multibase
@@ -3360,40 +3361,40 @@ This algorithm takes an encoder object from
           </p>
           <ol>
             <li>
-Set <code>prefixChar</code> to the first character of
-<code>encoderData.value</code>.
+Set <var>prefixChar</var> to the first character of
+<var>encoderData</var><code>.value</code>.
             </li>
             <li>
-Set <code>prefixByte</code> to the <a>Multibase Prefix Byte</a>
-corresponding to <code>prefixChar</code>.
+Set <var>prefixByte</var> to the <a>Multibase Prefix Byte</a>
+corresponding to <var>prefixChar</var>.
             </li>
             <li>
-Set <code>content</code> to the substring of
-<code>encoderData.value</code> beginning after the first character.
+Set <var>content</var> to the substring of
+<var>encoderData</var><code>.value</code> beginning after the first character.
             </li>
             <li>
-If <code>prefixChar</code> is <code>'z'</code>, set
-<code>suffixBytes</code> to the base58btc decoding of
-<code>content</code>.
+If <var>prefixChar</var> is <code>'z'</code>, set
+<var>suffixBytes</var> to the base58btc decoding of
+<var>content</var>.
             </li>
             <li>
-Otherwise, if <code>prefixChar</code> is <code>'u'</code>, set
-<code>suffixBytes</code> to the base64url decoding of
-<code>content</code>.
+Otherwise, if <var>prefixChar</var> is <code>'u'</code>, set
+<var>suffixBytes</var> to the base64url decoding of
+<var>content</var>.
             </li>
             <li>
-Otherwise (<code>prefixChar</code> is <code>'M'</code>), set
-<code>suffixBytes</code> to the base64pad decoding of
-<code>content</code>.
+Otherwise (<var>prefixChar</var> is <code>'M'</code>), set
+<var>suffixBytes</var> to the base64pad decoding of
+<var>content</var>.
             </li>
             <li>
-Set <code>bytes</code> to a byte array of length
-<code>1 + length(suffixBytes)</code>, with the first byte set to
-<code>prefixByte</code> and the remaining bytes set to
-<code>suffixBytes</code>.
+Set <var>bytes</var> to a byte array of length
+<code>1 + length(</code><var>suffixBytes</var><code>)</code>, with the first byte set to
+<var>prefixByte</var> and the remaining bytes set to
+<var>suffixBytes</var>.
             </li>
             <li>
-Return a CBOR encoding of <code>bytes</code> as a Major Type 2 (byte
+Return a CBOR encoding of <var>bytes</var> as a Major Type 2 (byte
 string) object.
             </li>
           </ol>
@@ -3402,16 +3403,16 @@ string) object.
         <section>
           <h4>Create Multibase Decoder</h4>
           <p>
-This algorithm takes a value <code>valueToDecode</code>, and returns a
+This algorithm takes a value <var>valueToDecode</var>, and returns a
 decoder object or <code>undefined</code>.
           </p>
           <ol>
             <li>
-If <code>valueToDecode</code> is not a byte string, return
+If <var>valueToDecode</var> is not a byte string, return
 <code>undefined</code>.
             </li>
             <li>
-If the first byte of <code>valueToDecode</code> is <code>0x7a</code>,
+If the first byte of <var>valueToDecode</var> is <code>0x7a</code>,
 <code>0x75</code>, or <code>0x4d</code>, return a decoder object.
             </li>
             <li>
@@ -3425,45 +3426,45 @@ prefix byte).
           <h4>Decode Multibase</h4>
           <p>
 This algorithm takes a decoder object and a byte string
-<code>value</code>, and returns a string.
+<var>value</var>, and returns a string.
           </p>
           <ol>
             <li>
-Set <code>prefixByte</code> to the first byte of <code>value</code>.
+Set <var>prefixByte</var> to the first byte of <var>value</var>.
             </li>
             <li>
-Set <code>suffix</code> to the remaining bytes of <code>value</code>
+Set <var>suffix</var> to the remaining bytes of <var>value</var>
 (i.e., all bytes after the first).
             </li>
             <li>
-If <code>prefixByte</code> is <code>0x7a</code> (<code>'z'</code>):
+If <var>prefixByte</var> is <code>0x7a</code> (<code>'z'</code>):
               <ol>
                 <li>
 Return the concatenation of <code>"z"</code> and the base58btc encoding
-of <code>suffix</code>.
+of <var>suffix</var>.
                 </li>
               </ol>
             </li>
             <li>
-If <code>prefixByte</code> is <code>0x75</code> (<code>'u'</code>):
+If <var>prefixByte</var> is <code>0x75</code> (<code>'u'</code>):
               <ol>
                 <li>
 Return the concatenation of <code>"u"</code> and the base64url encoding
-(no padding) of <code>suffix</code>.
+(no padding) of <var>suffix</var>.
                 </li>
               </ol>
             </li>
             <li>
-If <code>prefixByte</code> is <code>0x4d</code> (<code>'M'</code>):
+If <var>prefixByte</var> is <code>0x4d</code> (<code>'M'</code>):
               <ol>
                 <li>
 Return the concatenation of <code>"M"</code> and the base64pad encoding
-of <code>suffix</code>.
+of <var>suffix</var>.
                 </li>
               </ol>
             </li>
             <li>
-Otherwise, return <code>value</code>.
+Otherwise, return <var>value</var>.
             </li>
           </ol>
         </section>
