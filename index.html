@@ -562,7 +562,7 @@ absent, its value is `true`. When `true`, term identifiers are auto-generated as
         <dt>`codecs`</dt>
         <dd>
 OPTIONAL. A map from a type to a <dfn>codec identifier</dfn>. Here, a type is
-either a JSON-LD type expressed as an IRI the reserved value `url`, which matches
+either a JSON-LD type expressed as an IRI, or the reserved value `url`, which matches
 node references and values whose term is defined with an `@type` of `@id`. During
 conversion, the codec bound to a value's type, if any, is used to compress and decompress
 that value. When `codecs` is absent and the default processing model is not in use,
@@ -658,7 +658,8 @@ This specification does
 not constrain how user-specified codecs behave or how they are specified.
 Documents that define a processing model using such codecs are
 responsible for specifying each one precisely enough for interoperable implementation,
-and bear the burden of testing and correctness.
+and bear the burden of testing and correctness. Codecs that are defined in this
+specification MUST be identified with an IRI.
         </p>
         <p>
 The following example shows a processing model that uses a codec that compresses IP address
