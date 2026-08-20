@@ -1004,14 +1004,14 @@ Otherwise, set `isArray` to `false` and `contexts` to `[context]`.
 For `contextValue` in `contexts`:
               <ol>
                 <li>
-Set `encoderData` to the result of <a href="#create-context-encoder"></a>, passing
+Set `encodedData` to the result of <a href="#encode-context"></a>, passing
 `state.typeTable` and `contextValue`.
                 </li>
                 <li>
-If `encoderData` is an empty map, add `contextValue` to `encodedContexts`.
+If `encodedData` is `undefined`, add `contextValue` to `encodedContexts`.
                 </li>
                 <li>
-Otherwise, add the value of `encoderData` to `encodedContexts`.
+Otherwise, add the value of `encodedData` to `encodedContexts`.
                 </li>
               </ol>
             </li>
@@ -1926,15 +1926,12 @@ encode both primitive and non-primitive types as CBOR.
       <section>
         <h3>Context Codec</h3>
         <section>
-          <h4>Create Context Encoder</h4>
+          <h4>Encode Context</h4>
           <p>
 This algorithm takes a map `typeTable` and a value `contextValue` and
-returns a map `encoderData`.
+returns an integer or `undefined`.
           </p>
           <ol>
-            <li>
-Initialize `encoderData` to an empty map.
-            </li>
             <li>
 If `contextValue` is not a string, return.
             </li>
@@ -1942,27 +1939,10 @@ If `contextValue` is not a string, return.
 Otherwise, set `contextTable` to the value of "context" in `typeTable`.
             </li>
             <li>
-Set `encoderData.context` to `contextValue` and `encoderData.contextTable` to
-`contextTable`.
+If `contextValue` has an entry in `contextTable`, return the value of `contextValue` in `contextTable`.
             </li>
             <li>
-Return `encoderData`.
-            </li>
-          </ol>
-        </section>
-        <section>
-          <h4>Encode Context</h4>
-          <p>
-This algorithm takes a map `encoderData`, and returns CBOR binary data.
-          </p>
-          <ol>
-            <li>
-If `encoderData`.`context` has an entry in `encoderData`.`contextTable`, return a CBOR encoding
-of the value of `encoderData`.`context` in `encoderData` as a Major Type 0 (unsigned integer) object.
-            </li>
-            <li>
-Otherwise, return a CBOR encoding of the value of `encoderData`.`context` as a Major Type 3
-(text string) object.
+Otherwise, return.
             </li>
           </ol>
         </section>
