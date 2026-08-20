@@ -2961,10 +2961,9 @@ by this codec.
         </aside>
 
         <section>
-          <h4>Create XSD Date Encoder</h4>
+          <h4>Encode XSD Date</h4>
           <p>
-This algorithm takes a string <code>value</code>, and returns an encoder
-object or <code>undefined</code>.
+This algorithm takes a string <code>value</code>, and returns a value or <code>undefined</code>.
           </p>
           <ol>
             <li>
@@ -2983,22 +2982,8 @@ If <code>parsed</code> is not a valid number, return
 <code>undefined</code>.
             </li>
             <li>
-Return an encoder object containing <code>value</code> and
-<code>parsed</code>.
-            </li>
-          </ol>
-        </section>
-
-        <section>
-          <h4>Encode XSD Date</h4>
-          <p>
-This algorithm takes an encoder object from
-<a href="#create-xsd-date-encoder"></a>, and returns CBOR binary data.
-          </p>
-          <ol>
-            <li>
 Set <code>secondsSinceEpoch</code> to
-<code>floor(encoderData.parsed / 1000)</code>.
+<code>floor(parsed / 1000)</code>.
             </li>
             <li>
 Set <code>reconstituted</code> to the ISO 8601 string for the instant
@@ -3012,19 +2997,10 @@ Set <code>expectedDate</code> to the substring of
             </li>
             <li>
 If <code>encoderData.value</code> is not equal to
-<code>expectedDate</code>, the compression would be lossy. Return a CBOR
-encoding of <code>encoderData.value</code> as a Major Type 3 (text
-string) object.
+<code>expectedDate</code>, the compression would be lossy. Return <code>value</code>.
             </li>
             <li>
-If <code>secondsSinceEpoch</code> is greater than or equal to
-<code>0</code>, return a CBOR encoding of
-<code>secondsSinceEpoch</code> as a Major Type 0 (unsigned integer)
-object.
-            </li>
-            <li>
-Otherwise, return a CBOR encoding of <code>secondsSinceEpoch</code>
-as a Major Type 1 (negative integer) object.
+Otherwise, return <code>secondsSinceEpoch</code>.
             </li>
           </ol>
         </section>
