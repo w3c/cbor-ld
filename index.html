@@ -575,7 +575,6 @@ Registration requirements vary based on what Registry Entry ID is sought. The ra
 <b>65,536+</b>: First come, first served
             </li>
           </ul>
-        </p>
         <p>
 Registration requests must be in the form of pull requests raised against the CBOR-LD Registry
 via a fork of the repository. These requests must include:
@@ -1005,14 +1004,14 @@ Otherwise, set `isArray` to `false` and `contexts` to `[context]`.
 For `contextValue` in `contexts`:
               <ol>
                 <li>
-Set `encoderData` to the result of <a href="#create-context-encoder"></a>, passing
+Set `encodedData` to the result of <a href="#encode-context"></a>, passing
 `state.typeTable` and `contextValue`.
                 </li>
                 <li>
-If `encoderData` is an empty map, add `contextValue` to `encodedContexts`.
+If `encodedData` is `undefined`, add `contextValue` to `encodedContexts`.
                 </li>
                 <li>
-Otherwise, add the value of `encoderData` to `encodedContexts`.
+Otherwise, add the value of `encodedData` to `encodedContexts`.
                 </li>
               </ol>
             </li>
@@ -1044,7 +1043,7 @@ and returns a map `encoderData`.
 If `valueToEncode` is an object, return.
             </li>
             <li>
-Otherwise, set `result` to the result of <a href="#create-value-encoder"></a>, passing
+Otherwise, set `result` to the result of <a href="#encode-value"></a>, passing
 `state`, `termInfo`, `valueToToEncode`, and `termType`.
             </li>
             <li>
@@ -1927,15 +1926,12 @@ encode both primitive and non-primitive types as CBOR.
       <section>
         <h3>Context Codec</h3>
         <section>
-          <h4>Create Context Encoder</h4>
+          <h4>Encode Context</h4>
           <p>
 This algorithm takes a map `typeTable` and a value `contextValue` and
-returns a map `encoderData`.
+returns an integer or `undefined`.
           </p>
           <ol>
-            <li>
-Initialize `encoderData` to an empty map.
-            </li>
             <li>
 If `contextValue` is not a string, return.
             </li>
@@ -1943,27 +1939,10 @@ If `contextValue` is not a string, return.
 Otherwise, set `contextTable` to the value of "context" in `typeTable`.
             </li>
             <li>
-Set `encoderData.context` to `contextValue` and `encoderData.contextTable` to
-`contextTable`.
+If `contextValue` has an entry in `contextTable`, return the value of `contextValue` in `contextTable`.
             </li>
             <li>
-Return `encoderData`.
-            </li>
-          </ol>
-        </section>
-        <section>
-          <h4>Encode Context</h4>
-          <p>
-This algorithm takes a map `encoderData`, and returns CBOR binary data.
-          </p>
-          <ol>
-            <li>
-If `encoderData`.`context` has an entry in `encoderData`.`contextTable`, return a CBOR encoding
-of the value of `encoderData`.`context` in `encoderData` as a Major Type 0 (unsigned integer) object.
-            </li>
-            <li>
-Otherwise, return a CBOR encoding of the value of `encoderData`.`context` as a Major Type 3
-(text string) object.
+Otherwise, return.
             </li>
           </ol>
         </section>
@@ -2008,10 +1987,10 @@ Otherwise, throw an error ERR_UNDEFINED_COMPRESSED_CONTEXT.
       <section>
         <h3>Value Codec</h3>
         <section>
-          <h4>Create Value Encoder</h4>
+          <h4>Encode Value</h4>
           <p>
 This algorithm takes maps `state` and `termInfo`, and values
-`termType` and `valueToEncode`, and returns a map `encoderData` or `valueToEncode`.
+`termType` and `valueToEncode`, and returns a value.
           </p>
           <ol>
             <li>
@@ -2067,53 +2046,28 @@ Set `convertToBytes` and `includeSign` to `true`.
                 </li>
                 <li>
 If `intValue` is defined:
-                  <ol>
-                    <li>
-Initialize `encoderData` to an empty map.
-                    </li>
-                    <li>
-Set `encoderData`.`intValue` to the value of `intValue`, `encoderData`.`convertToBytes` to
-the value of `convertToBytes`, and `encoderData`.`includeSign` to the value of `includeSign`.
-                    </li>
-                    <li>
-Return `encoderData`.
-                    </li>
-                  </ol>
+                <ol>
+                  <li>
+If `convertToBytes` is `true`,
+return the result of converting `intValue` to a byte sequence, using the value of `includeSign` to
+determine whether the binary representation of the integer should be signed or unsigned.
+                  </li>
+                  <li>
+Otherwise, return `intValue`.
+                  </li>
+                </ol>
                 </li>
               </ol>
             </li>
             <li>
-If `tableType` has an entry in `state.processingModeTypeEncoders`, set `encoderData` to the result of
-calling the `Create Encoder` algorithm associated with that entry's codec.
+If `tableType` has an entry in `state.processingModeTypeEncoders`, set `encodedData` to the result of
+calling the `Encode Value` algorithm associated with that entry's codec.
             </li>
             <li>
-If `encoderData` is defined, return `encoderData`.
+If `encodedData` is defined, return `encodedData`.
             </li>
             <li>
 Return `valueToEncode`.
-            </li>
-          </ol>
-        </section>
-        <section>
-          <h4>Encode Value</h4>
-          <p>
-This algorithm takes a map `encoderData`, and returns CBOR binary data.
-          </p>
-          <ol>
-            <li>
-If `encoderData`.`convertToBytes` is `true`:
-              <ol>
-                <li>
-Set `bytes` to the result of converting `intValue` to bytes, using the value of `includeSign` to
-determine whether the binary representation of the integer should be signed or unsigned.
-                </li>
-                <li>
-Return a CBOR encoding of `bytes` as a Major Type 2 (byte string) object.
-                </li>
-              </ol>
-            </li>
-            <li>
-Otherwise, return a CBOR encoding of `intValue` as a Major Type 0 (unsigned integer) object.
             </li>
           </ol>
         </section>
@@ -3007,10 +2961,9 @@ by this codec.
         </aside>
 
         <section>
-          <h4>Create XSD Date Encoder</h4>
+          <h4>Encode XSD Date</h4>
           <p>
-This algorithm takes a string <code>value</code>, and returns an encoder
-object or <code>undefined</code>.
+This algorithm takes a string <code>value</code>, and returns a value or <code>undefined</code>.
           </p>
           <ol>
             <li>
@@ -3029,22 +2982,8 @@ If <code>parsed</code> is not a valid number, return
 <code>undefined</code>.
             </li>
             <li>
-Return an encoder object containing <code>value</code> and
-<code>parsed</code>.
-            </li>
-          </ol>
-        </section>
-
-        <section>
-          <h4>Encode XSD Date</h4>
-          <p>
-This algorithm takes an encoder object from
-<a href="#create-xsd-date-encoder"></a>, and returns CBOR binary data.
-          </p>
-          <ol>
-            <li>
 Set <code>secondsSinceEpoch</code> to
-<code>floor(encoderData.parsed / 1000)</code>.
+<code>floor(parsed / 1000)</code>.
             </li>
             <li>
 Set <code>reconstituted</code> to the ISO 8601 string for the instant
@@ -3058,19 +2997,10 @@ Set <code>expectedDate</code> to the substring of
             </li>
             <li>
 If <code>encoderData.value</code> is not equal to
-<code>expectedDate</code>, the compression would be lossy. Return a CBOR
-encoding of <code>encoderData.value</code> as a Major Type 3 (text
-string) object.
+<code>expectedDate</code>, the compression would be lossy. Return <code>value</code>.
             </li>
             <li>
-If <code>secondsSinceEpoch</code> is greater than or equal to
-<code>0</code>, return a CBOR encoding of
-<code>secondsSinceEpoch</code> as a Major Type 0 (unsigned integer)
-object.
-            </li>
-            <li>
-Otherwise, return a CBOR encoding of <code>secondsSinceEpoch</code>
-as a Major Type 1 (negative integer) object.
+Otherwise, return <code>secondsSinceEpoch</code>.
             </li>
           </ol>
         </section>
