@@ -1043,7 +1043,7 @@ and returns a map `encoderData`.
 If `valueToEncode` is an object, return.
             </li>
             <li>
-Otherwise, set `result` to the result of <a href="#create-value-encoder"></a>, passing
+Otherwise, set `result` to the result of <a href="#encode-value"></a>, passing
 `state`, `termInfo`, `valueToToEncode`, and `termType`.
             </li>
             <li>
@@ -1987,10 +1987,10 @@ Otherwise, throw an error ERR_UNDEFINED_COMPRESSED_CONTEXT.
       <section>
         <h3>Value Codec</h3>
         <section>
-          <h4>Create Value Encoder</h4>
+          <h4>Encode Value</h4>
           <p>
 This algorithm takes maps `state` and `termInfo`, and values
-`termType` and `valueToEncode`, and returns a map `encoderData` or `valueToEncode`.
+`termType` and `valueToEncode`, and returns a value.
           </p>
           <ol>
             <li>
@@ -2046,53 +2046,28 @@ Set `convertToBytes` and `includeSign` to `true`.
                 </li>
                 <li>
 If `intValue` is defined:
-                  <ol>
-                    <li>
-Initialize `encoderData` to an empty map.
-                    </li>
-                    <li>
-Set `encoderData`.`intValue` to the value of `intValue`, `encoderData`.`convertToBytes` to
-the value of `convertToBytes`, and `encoderData`.`includeSign` to the value of `includeSign`.
-                    </li>
-                    <li>
-Return `encoderData`.
-                    </li>
-                  </ol>
+                <ol>
+                  <li>
+If `convertToBytes` is `true`,
+return the result of converting `intValue` to a byte sequence, using the value of `includeSign` to
+determine whether the binary representation of the integer should be signed or unsigned.
+                  </li>
+                  <li>
+Otherwise, return `intValue`.
+                  </li>
+                </ol>
                 </li>
               </ol>
             </li>
             <li>
-If `tableType` has an entry in `state.processingModeTypeEncoders`, set `encoderData` to the result of
-calling the `Create Encoder` algorithm associated with that entry's codec.
+If `tableType` has an entry in `state.processingModeTypeEncoders`, set `encodedData` to the result of
+calling the `Encode Value` algorithm associated with that entry's codec.
             </li>
             <li>
-If `encoderData` is defined, return `encoderData`.
+If `encodedData` is defined, return `encodedData`.
             </li>
             <li>
 Return `valueToEncode`.
-            </li>
-          </ol>
-        </section>
-        <section>
-          <h4>Encode Value</h4>
-          <p>
-This algorithm takes a map `encoderData`, and returns CBOR binary data.
-          </p>
-          <ol>
-            <li>
-If `encoderData`.`convertToBytes` is `true`:
-              <ol>
-                <li>
-Set `bytes` to the result of converting `intValue` to bytes, using the value of `includeSign` to
-determine whether the binary representation of the integer should be signed or unsigned.
-                </li>
-                <li>
-Return a CBOR encoding of `bytes` as a Major Type 2 (byte string) object.
-                </li>
-              </ol>
-            </li>
-            <li>
-Otherwise, return a CBOR encoding of `intValue` as a Major Type 0 (unsigned integer) object.
             </li>
           </ol>
         </section>
