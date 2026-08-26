@@ -633,8 +633,8 @@ and obtain identical behavior.
       <section>
         <h3>Example: A Custom Processing Model</h3>
         <p>
-If a user does not wish semantic compression to be used, or wishes different
-codecs to be used than those in the default processing model, a registry entry can specify a
+If a user does not wish semantic compression to be used, and/or wishes to compress with
+codecs other than those in the default processing model, a registry entry can specify a
 custom processing model. The following is an example of a processing model without semantic
 compression and for which only the `xsd-date-time` codec is used:
         </p>
@@ -650,12 +650,12 @@ processingModel:
         <p>
 <a href="#codec-identifiers"></a> lists the codecs defined by this
 specification. CBOR-LD codecs are also intended as an extension point: a processing model MAY
-use codecs that are not specified here, but are instead defined by the
+use codecs that are not specified here, but are instead defined by a
 specification or other document that defines the processing model.
         </p>
         <p>
 This specification does
-not constrain how user-specified codecs behave or how they are specified.
+not constrain how user-specified codecs behave nor how they are specified.
 Documents that define a processing model using such codecs are
 responsible for specifying each one precisely enough for interoperable implementation,
 and bear the burden of testing and correctness. Codecs that are defined in this
