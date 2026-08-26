@@ -700,11 +700,11 @@ CBOR-LD payloads MUST be structured such that the item tagged with tag `0xCB1D` 
 a two-element array, and the first element MUST be a
 <a href="https://datatracker.ietf.org/doc/html/rfc8949#name-major-types">major type 0 integer</a>.
 This integer is a CBOR-LD Registry Entry ID. The binary structure is `tag([registryEntryId, payload])`.
-      </p>
-      <p>
+    </p>
+    <p>
 The value of the CBOR-LD Registry Entry ID is then used to look up a <b>CBOR-LD Registry Entry</b>
 in the <b>CBOR-LD Registry</b>.
-      </p>
+    </p>
     <section>
       <h2>CBOR-LD Registry</h2>
       <p>
@@ -717,14 +717,14 @@ The <dfn>CBOR-LD Registry</dfn> is a global list that provides consumers of
 CBOR-LD payloads the information they need to reconstruct the term-codec map required
 for decompression. A <dfn>CBOR-LD Registry Entry</dfn> contains the following:
       </p>
-        <ul>
-          <li>
+      <ul>
+        <li>
 `Registry Entry ID`: A positive integer.
-          </li>
-          <li>
+        </li>
+        <li>
 `Use Case`: The type of CBOR-LD payload this entry is to be used for.
-          </li>
-          <li>
+        </li>
+        <li>
 `typeTables`: The collection of registry dictionaries used with this registry entry. Each
 registry dictionary is identified by a <dfn>type table type</dfn> and maps values of that
 type to integers for compact encoding. A type table type is either one of the reserved
@@ -732,59 +732,59 @@ categories (`context` which applies to context values or `url` which applies to 
 URL values) or a JSON-LD type identifier, in which case the dictionary
 applies to typed-literal values of that type. See <a href="#value-codec"></a> for how these
 dictionaries are selected and applied during encoding and decoding.
-          </li>
-          <li>
+        </li>
+        <li>
 `processingModel`: The <a>processing model</a> used for this registry entry. If this field
 is absent, the registry entry uses the <a>default processing model</a>. A processing model
 specifies the following:
-            <ul>
-              <li>
+          <ul>
+            <li>
 whether or not semantic compression is used for dynamic JSON-LD term compression and, when
 it is, how context-based, auto-generated term identifiers are assigned,
-              </li>
-              <li>
+            </li>
+            <li>
 the core, generic codecs used for dynamic typed-value compression — for example the codecs
 for URLs, for `xsd:date` and `xsd:dateTime` values, and for multibase-encoded values — and
 the JSON-LD types to which each is applied, and
-              </li>
-              <li>
+            </li>
+            <li>
 any additional conversion behavior a consumer needs in order to process, or to losslessly
 recover the original JSON-LD document from, the CBOR-LD payload.
-              </li>
-            </ul>
+            </li>
+          </ul>
 The <a>default processing model</a> uses semantic compression and includes the codecs
 specified in this document. See <a href="#processing-models"></a> for a full description, and
 <a href="#expressing-a-processing-model"></a> for how the `processingModel` member is
 expressed, including a worked example of the default model.
-          </li>
-          <li>
+        </li>
+        <li>
 `provisional`: a boolean indicating whether the entry is provisional. Provisional entries
 may change or be removed.
-          </li>
-        </ul>
-        <p>
+        </li>
+      </ul>
+      <p>
 The string "callerProvidedTable", may appear in `typeTables`, denoting that for this use case, a
 `Type Table` is required which is not globally defined.
-        </p>
-        <section>
-          <h3>Registration</h3>
-          <p>
+      </p>
+      <section>
+        <h3>Registration</h3>
+        <p>
 The <a href="https://json-ld.github.io/cborld-registry/">current CBOR-LD Registry</a> is available online.
-          </p>
-          <p>
+        </p>
+        <p>
 Registration requirements vary based on what Registry Entry ID is sought. The ranges are as follows:
-          </p>
-          <ul>
-            <li>
+        </p>
+        <ul>
+          <li>
 <b>0–255</b>: Reserved
-            </li>
-            <li>
+          </li>
+          <li>
 <b>256–65,535</b>: Specification required
-            </li>
-            <li>
+          </li>
+          <li>
 <b>65,536+</b>: First come, first served
-            </li>
-          </ul>
+          </li>
+        </ul>
         <p>
 Registration requests must be in the form of pull requests raised against the CBOR-LD Registry
 via a fork of the repository. These requests must include:
@@ -3727,7 +3727,7 @@ Return `result`.
       </section>
     </section>
   </section>
-  
+
   <section class="informative">
     <h1>Security Considerations</h1>
   </section>
