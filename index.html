@@ -1460,11 +1460,11 @@ If `key` is odd, set `plural` to true. Otherwise, set `plural` to false.
                     </li>
                     <li>
 If `plural` is `true`, set `term` to the value of `key` minus 1 in `state`.`idToTerm`.
-If that value does not have an entry, throw an error ERR_UNKNOWN_CBORLD_TERM_ID.
+If that value does not have an entry, throw an error `ERR_UNKNOWN_CBORLD_TERM_ID`.
                     </li>
                     <li>
 Otherwise, set `term` to the value of `key` in `state`.`idToTerm`. If that value does not have
-an entry, throw an error ERR_UNKNOWN_CBORLD_TERM_ID.
+an entry, throw an error `ERR_UNKNOWN_CBORLD_TERM_ID`.
                     </li>
                   </ol>
                 </li>
@@ -1533,11 +1533,11 @@ If `key` is odd, set `plural` to true. Otherwise, set `plural` to false.
                     </li>
                     <li>
 If `plural` is `true`, set `term` to the value of `id` minus 1 in `state`.`idToTerm`.
-If that value does not have an entry, throw an error ERR_UNKNOWN_CBORLD_TERM_ID.
+If that value does not have an entry, throw an error `ERR_UNKNOWN_CBORLD_TERM_ID`.
                     </li>
                     <li>
 Otherwise, set `term` to the value of `id` in `state`.`idToTerm`. If that value does not have
-an entry, throw an error ERR_UNKNOWN_CBORLD_TERM_ID.
+an entry, throw an error `ERR_UNKNOWN_CBORLD_TERM_ID`.
                     </li>
                   </ol>
                 </li>
@@ -1802,7 +1802,7 @@ If the value of `protected` in `activeDef` is `true`:
                           <ol>
                             <li>
 If `allowProtectedOverride` is set to `false` and `def` is not identical to `activeDef`,
-throw an error ERR_PROTECTED_TERM_REDEFINITION.
+throw an error `ERR_PROTECTED_TERM_REDEFINITION`.
                             </li>
                             <li>
 Otherwise, set the value of `term` in `newTermMap` to a map containing the values from `activeDef`
@@ -2210,7 +2210,7 @@ Otherwise, if `decoderData`.`reverseContextTable` has an entry for `value`, retu
 the value of that entry.
             </li>
             <li>
-Otherwise, throw an error ERR_UNDEFINED_COMPRESSED_CONTEXT.
+Otherwise, throw an error `ERR_UNDEFINED_COMPRESSED_CONTEXT`.
             </li>
           </ol>
         </section>
@@ -2393,7 +2393,7 @@ Set `intValue` to `valueToDecode`.
 If `useTable` is `true`:
                   <ol>
                     <li>
-If `intValue` is not in `subTable`, throw an error ERR_UNKNOWN_COMPRESSED_VALUE.
+If `intValue` is not in `subTable`, throw an error `ERR_UNKNOWN_COMPRESSED_VALUE`.
                     </li>
                     <li>
 Otherwise, set `decoded` to the value of `intValue` in `subTable`.
