@@ -906,7 +906,8 @@ Set `state` to the result of passing `state` to
 <a href="#initialize-conversion-algorithm"></a>.
             </li>
             <li>
-Set `input` to the result of decoding `suffix` from bytes to a map.
+Set `input` to the result of decoding `suffix. If the result is not a map or an array, throw an error 
+`ERR_INVALID_PAYLOAD_STRUCTURE`.
             </li>
             <li>
 Set `jsonldDocument` to the result of passing `state` and `input` as `inputDocuments`
