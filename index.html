@@ -839,6 +839,10 @@ the registry repository maintainers on a "first-come, first-served" basis, witho
     <p>Note also that, while JSON only allows strings to be keys of a map,
       CBOR allows to use any type in that role, including numbers.</p>
 
+    <p>Note also that the output of the <a href="#cbor-ld-to-json-ld-decoding-algorithm"></a>
+      will never contain any of these extensions,
+      and can therefore be handled by JSON-LD processors as defined by [[[JSON-LD11-API]]] [[JSON-LD11-API]].</p>
+
     <section>
       <h2>Parsing CBOR into the internal representation</h2>
       <ul>
