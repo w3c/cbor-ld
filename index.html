@@ -2703,10 +2703,10 @@ the prefix-stripped portion of the URL as a text string.
           </p>
 
           <section id="create-http-url-encoder">
-            <h5>Create HTTP URL Encoder</h5>
+            <h5>Encode HTTP URL</h5>
             <p>
 This algorithm takes a string <code>value</code>, and returns an
-encoder object or <code>undefined</code>.
+array or <code>undefined</code>.
             </p>
             <ol>
               <li>
@@ -2721,32 +2721,16 @@ Otherwise, if <code>value</code> starts with <code>"http://"</code>, set
 Otherwise, return <code>undefined</code>.
               </li>
               <li>
-Return an encoder object containing <code>value</code> and
-<code>prefix</code>.
-              </li>
-            </ol>
-          </section>
-
-          <section>
-            <h5>Encode HTTP URL</h5>
-            <p>
-This algorithm takes an encoder object from
-<a href="#create-http-url-encoder"></a>, and returns CBOR binary data.
-            </p>
-            <ol>
-              <li>
-Set <code>prefixId</code> to the value of <code>encoderData.prefix</code>
+Set <code>prefixId</code> to the value of <code>prefix</code>
 in the <a>URL Prefix Table</a>.
               </li>
               <li>
-Set <code>rest</code> to the substring of <code>encoderData.value</code>
+Set <code>rest</code> to the substring of <code>value</code>
 beginning after <code>encoderData.prefix</code>.
               </li>
               <li>
-Return a CBOR encoding of a two-element array
-<code>[prefixId, rest]</code>: Major Type 4 (array) containing a
-Major Type 0 (unsigned integer) item followed by a Major Type 3
-(text string) item.
+Return a two-element array
+<code>[prefixId, rest]</code>.
               </li>
             </ol>
           </section>
