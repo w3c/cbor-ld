@@ -1513,13 +1513,13 @@ If `term` does not have an entry in `state`.`termToId`, set `termId` to `term`.
 Otherwise, set `termId` to the value of `term` in `state`.`termToId`.
                 </li>
                 <li>
-If neither `termId` nor `termId` plus 1 are present in `input`, continue.
+If `termId` is present in `input`, set `value` to the value of `termId` in `input`.
                 </li>
                 <li>
-Otherwise, if `termId` is present in `input`, set `value` to the value of `termId` in `input`.
+Otherwise, if `termId` is a number and `termId` plus 1 is  present in `input`, set `value` to the value of `termId` plus 1 in `input`, and set `plural` to `true`.
                 </li>
                 <li>
-Otherwise, set `value` to the value of `termId` plus 1 in `input`.
+Otherwise, continue with the next iteration on `term`.
                 </li>
                 <li>
 Set `definition` to the value of `term` in `activeContext`.`termMap`.
