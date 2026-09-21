@@ -2890,15 +2890,18 @@ as a two-element CBOR array <code>[4, rest]</code> where
           </p>
 
           <section id="create-data-url-encoder">
-            <h5>Create Data URL Encoder</h5>
+            <h5>Encode Data URL</h5>
             <p>
-This algorithm takes a string <code>value</code>, and returns an encoder
-object or <code>undefined</code>.
+This algorithm takes a string <code>value</code>, and returns an array
+or <code>undefined</code>.
             </p>
             <ol>
               <li>
 If <code>value</code> does not start with <code>"data:"</code>, return
 <code>undefined</code>.
+              </li>
+              <li>
+Set `base64` to `false`.
               </li>
               <li>
 Attempt to match <code>value</code> against the regular expression
@@ -2911,49 +2914,28 @@ where each <code>.*</code> is greedy (i.e., if the string
 If the match succeeds:
                 <ol>
                   <li>
-Set <code>data</code> to the value of the <code>data</code> capture
+Set <code>mediatype</code> and <code>data</code> to the value of the corresponding capture
 group.
                   </li>
                   <li>
-Verify round-trip integrity: decode <code>data</code> from base64 and
-re-encode to base64. If the result equals <code>data</code>, return an
-encoder object with <code>value</code> and <code>base64</code> set to
+Set <code>dataBytes</code> to the decoding of <code>data</code> from base64 into a byte sequence, or <code>undefined</code> if the decoding fails.
+                  </li>
+                  <li>
+Verify round-trip integrity: if <code>dataBytes</code> is defined, and its encoding to base64 equals <code>data</code> fr, set <code>base64</code> to
 <code>true</code>.
                   </li>
                 </ol>
               </li>
               <li>
-Return an encoder object with <code>value</code> and <code>base64</code>
-set to <code>false</code>.
-              </li>
-            </ol>
-          </section>
-
-          <section>
-            <h5>Encode Data URL</h5>
-            <p>
-This algorithm takes an encoder object from
-<a href="#create-data-url-encoder"></a>, and returns CBOR binary data.
-            </p>
-            <ol>
-              <li>
 Set <code>prefixId</code> to <code>4</code> (the entry for
 <code>"data:"</code> in the <a>URL Prefix Table</a>).
               </li>
               <li>
-If <code>encoderData.base64</code> is <code>true</code>:
+If <code>base64</code> is <code>true</code>:
                 <ol>
                   <li>
-Parse <code>encoderData.value</code> to extract <code>mediatype</code>
-(the substring between <code>"data:"</code> and <code>";base64,"</code>)
-and <code>dataBytes</code> (the binary decoding of the base64 data
-portion).
-                  </li>
-                  <li>
-Return a CBOR encoding of a three-element array
-<code>[prefixId, mediatype, dataBytes]</code>: Major Type 4 (array)
-containing a Major Type 0 integer, a Major Type 3 text string, and a
-Major Type 2 byte string.
+Return a three-element array
+<code>[prefixId, mediatype, dataBytes]</code>.
                   </li>
                 </ol>
               </li>
@@ -2961,13 +2943,12 @@ Major Type 2 byte string.
 Otherwise:
                 <ol>
                   <li>
-Set <code>rest</code> to the substring of <code>encoderData.value</code>
+Set <code>rest</code> to the substring of <code>value</code>
 beginning after <code>"data:"</code>.
                   </li>
                   <li>
-Return a CBOR encoding of a two-element array
-<code>[prefixId, rest]</code>: Major Type 4 (array) containing a
-Major Type 0 integer and a Major Type 3 text string.
+Return a two-element array
+<code>[prefixId, rest]</code>.
                   </li>
                 </ol>
               </li>
