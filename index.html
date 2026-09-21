@@ -3032,41 +3032,22 @@ The <a>URL Prefix Table</a> entries used by this codec are
           </aside>
 
           <section id="create-base58-did-url-encoder">
-            <h5>Create Base58 DID URL Encoder</h5>
-            <p>
-This algorithm takes a string <code>value</code>, and returns an
-encoder object or <code>undefined</code>.
-            </p>
-            <ol>
-              <li>
-For each <code>[prefix, prefixId]</code> pair in the
-<a>URL Prefix Table</a> where the prefix starts with
-<code>"did:"</code>:
-                <ol>
-                  <li>
-If <code>value</code> starts with <code>prefix</code>, return an encoder
-object containing <code>value</code>, <code>prefix</code>, and
-<code>prefixId</code>.
-                  </li>
-                </ol>
-              </li>
-              <li>
-Return <code>undefined</code>.
-              </li>
-            </ol>
-          </section>
-
-          <section>
             <h5>Encode Base58 DID URL</h5>
             <p>
-This algorithm takes an encoder object from
-<a href="#create-base58-did-url-encoder"></a>, and returns CBOR binary
-data.
+This algorithm takes a string <code>value</code>, and returns an
+array or <code>undefined</code>.
             </p>
             <ol>
               <li>
-Set <code>suffix</code> to the substring of <code>encoderData.value</code>
-beginning after <code>encoderData.prefix</code>.
+Look for a <code>[prefix, prefixId]</code> pair in the
+<a>URL Prefix Table</a> where the prefix starts with
+<code>"did:"</code> and <code>value</code> starts with <code>prefix</code>.
+              <li>
+Otherwise, return <code>undefined</code>.
+              </li>
+              <li>
+Set <code>suffix</code> to the substring of <code>value</code>
+beginning after <code>prefix</code>.
               </li>
               <li>
 Split <code>suffix</code> on the first occurrence of <code>'#'</code>
@@ -3079,8 +3060,8 @@ Set <code>authorityEncoded</code> to the result of applying the
 <code>authority</code>.
               </li>
               <li>
-Initialize <code>entries</code> to
-<code>[encoderData.prefixId, authorityEncoded]</code>.
+Initialize <code>entries</code> to the array
+<code>[prefixId, authorityEncoded]</code>.
               </li>
               <li>
 If <code>fragment</code> is defined:
@@ -3096,8 +3077,7 @@ Append <code>fragmentEncoded</code> to <code>entries</code>.
                 </ol>
               </li>
               <li>
-Return a CBOR encoding of <code>entries</code> as a Major Type 4
-(array).
+Return <code>entries</code>.
               </li>
             </ol>
           </section>
@@ -3106,9 +3086,7 @@ Return a CBOR encoding of <code>entries</code> as a Major Type 4
             <h5>Multibase Base58 to CBOR Token</h5>
             <p>
 The <dfn>Multibase Base58 to CBOR Token</dfn> algorithm takes a string
-<code>str</code> and returns either a Major Type 2 (byte string) CBOR
-token (if the value is a base58btc multibase string) or a Major Type 3
-(text string) CBOR token.
+<code>str</code> and returns either a byte sequence or a string.
             </p>
             <ol>
               <li>
@@ -3116,16 +3094,16 @@ If <code>str</code> starts with <code>'z'</code>:
                 <ol>
                   <li>
 Set <code>decoded</code> to the result of decoding the base58btc content
-of <code>str</code> (i.e. <code>str[1:]</code>).
+of <code>str</code> (i.e. <code>str[1:]</code>) into a byte sequence.
                   </li>
                   <li>
-If decoding succeeds, return a Major Type 2 (byte string) CBOR token
-for <code>decoded</code>.
+If decoding succeeds, return
+<code>decoded</code>.
                   </li>
                 </ol>
               </li>
               <li>
-Return a Major Type 3 (text string) CBOR token for <code>str</code>.
+Return <code>str</code>.
               </li>
             </ol>
           </section>
