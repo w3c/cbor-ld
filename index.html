@@ -817,6 +817,100 @@ the registry repository maintainers on a "first-come, first-served" basis, witho
       </section>
     </section>
   </section>
+  <section class="normative introductory" id="internal-representation">
+    <h1>Internal Representation</h1>
+    <p>Following  [[[JSON-LD11-API]]] [[JSON-LD11-API]],
+      this specification describes the processing of JSON-LD documents and CBOR-LD documents in terms of an abtract
+      <dfn data-cite="JSON-LD11-API#dfn-internal-representation">internal representation</dfn>.
+    </p>
+
+    <p>In order to represent CBOR-specific data structures, we need to extend JSON-LD's internal representation.
+      In addition to
+      <dfn data-cite="INFRA#list">arrays</dfn>,
+      <dfn data-cite="INFRA#ordered-map">maps</dfn>,
+      <dfn data-cite="INFRA#javascript-string">strings</dfn>,
+      <dfn data-cite="ECMASCRIPT#sec-terms-and-definitions-number-value">numbers</dfn>,
+      <dfn data-cite="INFRA#boolean">booleans</dfn>,
+      and
+      <dfn data-cite="INFRA#nulls">nulls</dfn>,
+      this specification uses <dfn data-cite="INFRA#byte-sequence">byte sequences</dfn>.
+    </p>
+
+    <p>Note also that, while JSON only allows strings to be keys of a map,
+      CBOR allows to use any type in that role, including numbers.</p>
+
+    <p>Note also that the output of the <a href="#cbor-ld-to-json-ld-decoding-algorithm"></a>
+      will never contain any of these extensions,
+      and can therefore be handled by JSON-LD processors as defined by [[[JSON-LD11-API]]] [[JSON-LD11-API]].</p>
+
+    <section>
+      <h2>Parsing CBOR into the internal representation</h2>
+      <ul>
+        <li>A data item with major type 0 or 1 (positive or negative integer, respectively)
+          is parsed as the equivalent [=number=].
+          Note that this may lead to loss of precision for very large integers (|`n`| ≥ 2<sup>53</sup>).
+        </li>
+        <li>A data item with major type 2 (binary string) is parsed as a [=byte sequence=].</li>
+        <li>A data item with major type 3 (text string) is parsed as a [=string=].</li>
+        <li>A data item with major type 4 (array) is parsed as an [=array=],
+          whose items are parsed by recursively applying these rules.</li>
+        <li>A data item with major type 5 (map) is parsed as a [=map=],
+          whose keys and values are parsed by recursively applying these rules.</li>
+        <li>A data item with major type 7 (primitive) is parsed as:<ul>
+          <li>the [=boolean=] value `false` if the additional type value is 20
+          <li>the [=boolean=] value `true` if the additional type value is 21
+          <li>the [=null=] value if the additional type value is 22
+          <li>a [=number=] if the additional type value is 24, 25, or 26 (floating point numbers),
+            and the value is neither `NaN` nor infinite
+        </ul></li>
+        <li>Any other data item is not representable in the internal representation, and should raise an error.</li>
+      </ul>
+      <p class="note">
+        It should be noted that CBOR tags (major type 6) are not parsed into the internal representation.
+         CBOR-LD does not use CBOR tags, except at the top level, and this tag is managed in an ad-hoc fashion in Section&nbsp;<a href="#get-registry-entry-id-algorithm"></a>.
+      </p>
+    </section>
+
+    <section>
+      <h2>Serializing the internal representation in CBOR</h2>
+      <ul>
+        <li id="serialize-null-bool">
+          [=Null=] and [=boolean=] values are serialized with major type 7,
+          and additional type value 22 for `null`, 20 for `false` and 21 for `true`.
+        </li>
+        <li id="serialize-int">
+          [=Numbers=] that are <a data-cite="ECMASCRIPT#sec-number.issafeinteger">safe integers</a>,
+          that is, that have no fractional part and with a value between -(2<sup>53</sup>-1) and 2<sup>53</sup>-1 inclusive,
+          are serialized as CBOR integers (major types 0 and 1 depending on their sign),
+          choosing the shortest form.
+        </li>
+        <li id="serialize-float">
+          [=Numbers=] that are not <a data-cite="ECMASCRIPT#sec-number.issafeinteger">safe integers</a> (see above)
+          are serialized as CBOR floating-point values (major type 7, and additional type value from 25 to 27). 
+          Preferably,
+          the shortest exact floating-point representation is used;
+          for instance, 1.5 is represented in a 16-bit floating-point value
+          (not all implementations will be capable of efficiently finding the minimum form, though).
+        </li>
+        <li id="serialize-string">
+          [=Strings=] are serialized as CBOR UTF-8 text strings (major type 3).
+          Note that, unlike JSON,
+          CBOR does not require any escaping in strings.
+        </li>
+        <li id="serialize-byte-sequence">
+          [=Byte sequences=] are serialized as CBOR binary strings (major type 2).
+        </li>
+        <li id="serialize-array">
+          [=Arrays=] are serialized as CBOR arrays (major type 4),
+          and their items are serialized by applying these rules recursively.
+        </li>
+        <li id="serialize-map">
+          [=Maps=] are serialized as CBOR maps (major type 5),
+          and their keys and values are serialized by applying these rules recursively.
+        </li>
+      </ul>
+    </section>
+  </section>
   <section class="normative">
     <h1>Algorithms</h1>
 In this section, we specify the algorithms required to convert JSON-LD to CBOR-LD
@@ -828,7 +922,7 @@ the CBOR-LD payload does not use semantic compression.
         <h3>JSON-LD to CBOR-LD Encoding Algorithm</h3>
         <p>
 This algorithm takes a map `typeTable`, an integer `registryEntryId`, and a JSON-LD
-document `jsonldDocument` as inputs, and returns a hexadecimal string `cborldBytes`.
+document `jsonldDocument` as inputs, and returns a byte sequence `cborldBytes`.
         </p>
         <ol>
           <li>
@@ -859,15 +953,15 @@ Set `output` to the result of passing `state` and `jsonldDocument`
 as `inputDocuments` to <a href="#convert-document-algorithm"></a>.
             </li>
             <li>
-Set `suffix` to the CBOR encoding of `output`.
+Set `suffix` to the <a href="#serializing-the-internal-representation-in-cbor">CBOR serialization</a> of `output`.
             </li>
           </ol>
           </li>
           <li>
-Otherwise, set `suffix` to the CBOR encoding of `jsonldDocument`.
+Otherwise, set `suffix` to the <a href="#serializing-the-internal-representation-in-cbor">CBOR serialization</a> of `jsonldDocument`.
           </li>
           <li>
-Set `cborldBytes` to a hexidecimal encoding of `prefix` prepended to `suffix`.
+Set `cborldBytes` the concatenation of `prefix` and `suffix`.
           </li>
           <li>
 Return `cborldBytes`.
@@ -877,7 +971,7 @@ Return `cborldBytes`.
       <section>
         <h3>CBOR-LD to JSON-LD Decoding Algorithm</h3>
         <p>
-This algorithm takes a CBOR-LD payload `cborldBytes`, and returns a JSON-LD document `jsonldDocument`.
+This algorithm takes a CBOR-LD payload `cborldBytes` as a byte sequence, and returns a JSON-LD document `jsonldDocument`.
         </p>
         <ol>
           <li>
@@ -906,7 +1000,7 @@ Set `state` to the result of passing `state` to
 <a href="#initialize-conversion-algorithm"></a>.
             </li>
             <li>
-Set `input` to the result of decoding `suffix` from bytes to a map.
+Set `input` to the result of <a href="#parsing-cbor-into-the-internal-representation">parsing</a> `suffix` from CBOR bytes to a map.
             </li>
             <li>
 Set `jsonldDocument` to the result of passing `state` and `input` as `inputDocuments`
@@ -915,7 +1009,7 @@ to <a href="#convert-document-algorithm"></a>.
           </ol>
           </li>
           <li>
-Otherwise, set `jsonldDocument` to the result of decoding `suffix` from bytes to a map.
+Otherwise, set `jsonldDocument` to the result of <a href="#parsing-cbor-into-the-internal-representation">parsing</a> `suffix` from CBOR bytes to a map.
           </li>
           <li>
 Return `jsonldDocument`.
@@ -1214,14 +1308,14 @@ Otherwise, set `isArray` to `false` and `contexts` to `[context]`.
 For `contextValue` in `contexts`:
               <ol>
                 <li>
-Set `encoderData` to the result of <a href="#create-context-encoder"></a>, passing
+Set `encodedData` to the result of <a href="#encode-context"></a>, passing
 `state.typeTable` and `contextValue`.
                 </li>
                 <li>
-If `encoderData` is an empty map, add `contextValue` to `encodedContexts`.
+If `encodedData` is `undefined`, add `contextValue` to `encodedContexts`.
                 </li>
                 <li>
-Otherwise, add the value of `encoderData` to `encodedContexts`.
+Otherwise, add `encodedData` to `encodedContexts`.
                 </li>
               </ol>
             </li>
@@ -1253,7 +1347,7 @@ and returns a map `encoderData`.
 If `valueToEncode` is an object, return.
             </li>
             <li>
-Otherwise, set `result` to the result of <a href="#create-value-encoder"></a>, passing
+Otherwise, set `result` to the result of <a href="#encode-value"></a>, passing
 `state`, `termInfo`, `valueToToEncode`, and `termType`.
             </li>
             <li>
@@ -2136,15 +2230,12 @@ encode both primitive and non-primitive types as CBOR.
       <section>
         <h3>Context Codec</h3>
         <section>
-          <h4>Create Context Encoder</h4>
+          <h4>Encode Context</h4>
           <p>
 This algorithm takes a map `typeTable` and a value `contextValue` and
-returns a map `encoderData`.
+returns an integer or `undefined`.
           </p>
           <ol>
-            <li>
-Initialize `encoderData` to an empty map.
-            </li>
             <li>
 If `contextValue` is not a string, return.
             </li>
@@ -2152,27 +2243,10 @@ If `contextValue` is not a string, return.
 Otherwise, set `contextTable` to the value of "context" in `typeTable`.
             </li>
             <li>
-Set `encoderData.context` to `contextValue` and `encoderData.contextTable` to
-`contextTable`.
+If `contextValue` has an entry in `contextTable`, return the value of `contextValue` in `contextTable`.
             </li>
             <li>
-Return `encoderData`.
-            </li>
-          </ol>
-        </section>
-        <section>
-          <h4>Encode Context</h4>
-          <p>
-This algorithm takes a map `encoderData`, and returns CBOR binary data.
-          </p>
-          <ol>
-            <li>
-If `encoderData`.`context` has an entry in `encoderData`.`contextTable`, return a CBOR encoding
-of the value of `encoderData`.`context` in `encoderData` as a Major Type 0 (unsigned integer) object.
-            </li>
-            <li>
-Otherwise, return a CBOR encoding of the value of `encoderData`.`context` as a Major Type 3
-(text string) object.
+Otherwise, return.
             </li>
           </ol>
         </section>
@@ -2217,10 +2291,10 @@ Otherwise, throw an error `ERR_UNDEFINED_COMPRESSED_CONTEXT`.
       <section>
         <h3>Value Codec</h3>
         <section>
-          <h4>Create Value Encoder</h4>
+          <h4>Encode Value</h4>
           <p>
 This algorithm takes maps `state` and `termInfo`, and values
-`termType` and `valueToEncode`, and returns a map `encoderData` or `valueToEncode`.
+`termType` and `valueToEncode`, and returns a value.
           </p>
           <ol>
             <li>
@@ -2276,53 +2350,28 @@ Set `convertToBytes` and `includeSign` to `true`.
                 </li>
                 <li>
 If `intValue` is defined:
-                  <ol>
-                    <li>
-Initialize `encoderData` to an empty map.
-                    </li>
-                    <li>
-Set `encoderData`.`intValue` to the value of `intValue`, `encoderData`.`convertToBytes` to
-the value of `convertToBytes`, and `encoderData`.`includeSign` to the value of `includeSign`.
-                    </li>
-                    <li>
-Return `encoderData`.
-                    </li>
-                  </ol>
+                <ol>
+                  <li>
+If `convertToBytes` is `true`,
+return the result of converting `intValue` to a byte sequence, using the value of `includeSign` to
+determine whether the binary representation of the integer should be signed or unsigned.
+                  </li>
+                  <li>
+Otherwise, return `intValue`.
+                  </li>
+                </ol>
                 </li>
               </ol>
             </li>
             <li>
-If `tableType` has an entry in `state.processingModeTypeEncoders`, set `encoderData` to the result of
-calling the `Create Encoder` algorithm associated with that entry's codec.
+If `tableType` has an entry in `state.processingModeTypeEncoders`, set `encodedData` to the result of
+calling the `Encode Value` algorithm associated with that entry's codec.
             </li>
             <li>
-If `encoderData` is defined, return `encoderData`.
+If `encodedData` is defined, return `encodedData`.
             </li>
             <li>
 Return `valueToEncode`.
-            </li>
-          </ol>
-        </section>
-        <section>
-          <h4>Encode Value</h4>
-          <p>
-This algorithm takes a map `encoderData`, and returns CBOR binary data.
-          </p>
-          <ol>
-            <li>
-If `encoderData`.`convertToBytes` is `true`:
-              <ol>
-                <li>
-Set `bytes` to the result of converting `intValue` to bytes, using the value of `includeSign` to
-determine whether the binary representation of the integer should be signed or unsigned.
-                </li>
-                <li>
-Return a CBOR encoding of `bytes` as a Major Type 2 (byte string) object.
-                </li>
-              </ol>
-            </li>
-            <li>
-Otherwise, return a CBOR encoding of `intValue` as a Major Type 0 (unsigned integer) object.
             </li>
           </ol>
         </section>
@@ -2470,10 +2519,10 @@ inversion of this table (i.e., a map from integers to URL prefix strings).
         </section>
 
         <section>
-          <h4>Create URL Encoder</h4>
+          <h4>Encode URL</h4>
           <p>
 This algorithm takes a map <code>state</code>, a map <code>termInfo</code>,
-and a string <code>valueToEncode</code>, and returns either an encoder object
+and a string <code>valueToEncode</code>, and returns either an integer, an array
 or <code>undefined</code>.
           </p>
           <ol>
@@ -2486,9 +2535,7 @@ Set <code>termId</code> to the result of looking up
 <code>valueToEncode</code> in <code>state.termToId</code>.
             </li>
             <li>
-If <code>termId</code> is an integer, return an encoder that, when
-invoked via <a href="#encode-url"></a>, encodes <code>termId</code> as
-a Major Type 0 (unsigned integer) CBOR item.
+If <code>termId</code> is defined and is an integer, return it.
             </li>
             <li>
 Attempt to parse <code>valueToEncode</code> as a URL.
@@ -2506,46 +2553,27 @@ possible for this URL).
             <li>
 If <code>prefix</code> is "<code>https://</code>" or
 "<code>http://</code>", return the result of
-<a href="#create-http-url-encoder"></a> passing
+<a href="#encode-http-url"></a> passing
 <code>valueToEncode</code>.
             </li>
             <li>
 If <code>prefix</code> is "<code>urn:uuid:</code>", return the result of
-<a href="#create-uuid-urn-encoder"></a> passing
+<a href="#encode-uuid-urn"></a> passing
 <code>valueToEncode</code>.
             </li>
             <li>
 If <code>prefix</code> is "<code>data:</code>", return the result of
-<a href="#create-data-url-encoder"></a> passing
+<a href="#encode-data-url"></a> passing
 <code>valueToEncode</code>.
             </li>
             <li>
 If <code>prefix</code> is "<code>did:v1:nym:</code>" or
 "<code>did:key:</code>", return the result of
-<a href="#create-base58-did-url-encoder"></a> passing
+<a href="#encode-base58-did-url"></a> passing
 <code>valueToEncode</code>.
             </li>
             <li>
 Return <code>undefined</code> (meaning, no compression is possible for this URL).
-            </li>
-          </ol>
-        </section>
-
-        <section id="encode-url">
-          <h4>Encode URL</h4>
-          <p>
-This algorithm takes an encoder object produced by
-<a href="#create-url-encoder"></a>, and returns CBOR binary data.
-          </p>
-          <ol>
-            <li>
-If the encoder was created for a term-ID match (step 3 of
-<a href="#create-url-encoder"></a>), return a CBOR encoding of
-<code>termId</code> as a Major Type 0 (unsigned integer) object.
-            </li>
-            <li>
-Otherwise, invoke the <code>encode</code> method of the appropriate
-prefix-specific sub-encoder and return the resulting CBOR binary data.
             </li>
           </ol>
         </section>
@@ -2653,11 +2681,11 @@ integer from the <a>URL Prefix Table</a> and <code>remainder</code> is
 the prefix-stripped portion of the URL as a text string.
           </p>
 
-          <section id="create-http-url-encoder">
-            <h5>Create HTTP URL Encoder</h5>
+          <section id="encode-http-url"><span id="create-http-url-encoder"></span>
+            <h5>Encode HTTP URL</h5>
             <p>
 This algorithm takes a string <code>value</code>, and returns an
-encoder object or <code>undefined</code>.
+array or <code>undefined</code>.
             </p>
             <ol>
               <li>
@@ -2672,32 +2700,16 @@ Otherwise, if <code>value</code> starts with <code>"http://"</code>, set
 Otherwise, return <code>undefined</code>.
               </li>
               <li>
-Return an encoder object containing <code>value</code> and
-<code>prefix</code>.
-              </li>
-            </ol>
-          </section>
-
-          <section>
-            <h5>Encode HTTP URL</h5>
-            <p>
-This algorithm takes an encoder object from
-<a href="#create-http-url-encoder"></a>, and returns CBOR binary data.
-            </p>
-            <ol>
-              <li>
-Set <code>prefixId</code> to the value of <code>encoderData.prefix</code>
+Set <code>prefixId</code> to the value of <code>prefix</code>
 in the <a>URL Prefix Table</a>.
               </li>
               <li>
-Set <code>rest</code> to the substring of <code>encoderData.value</code>
+Set <code>rest</code> to the substring of <code>value</code>
 beginning after <code>encoderData.prefix</code>.
               </li>
               <li>
-Return a CBOR encoding of a two-element array
-<code>[prefixId, rest]</code>: Major Type 4 (array) containing a
-Major Type 0 (unsigned integer) item followed by a Major Type 3
-(text string) item.
+Return a two-element array
+<code>[prefixId, rest]</code>.
               </li>
             </ol>
           </section>
@@ -2758,10 +2770,9 @@ round-tripped through binary form).
           </p>
 
           <section>
-            <h5>Create UUID URN Encoder</h5>
+            <h5>Encode UUID URN</h5>
             <p>
-This algorithm takes a string <code>value</code>, and returns an encoder
-object or <code>undefined</code>.
+This algorithm takes a string <code>value</code>, and returns an array or <code>undefined</code>.
             </p>
             <ol>
               <li>
@@ -2769,23 +2780,11 @@ If <code>value</code> does not start with <code>"urn:uuid:"</code>,
 return <code>undefined</code>.
               </li>
               <li>
-Return an encoder object containing <code>value</code>.
-              </li>
-            </ol>
-          </section>
-
-          <section>
-            <h5>Encode UUID URN</h5>
-            <p>
-This algorithm takes an encoder object, and returns CBOR binary data.
-            </p>
-            <ol>
-              <li>
 Set <code>prefixId</code> to <code>3</code> (the entry for
 <code>"urn:uuid:"</code> in the <a>URL Prefix Table</a>).
               </li>
               <li>
-Set <code>rest</code> to the substring of <code>encoderData.value</code>
+Set <code>rest</code> to the substring of <code>value</code>
 beginning after <code>"urn:uuid:"</code>.
               </li>
               <li>
@@ -2869,16 +2868,19 @@ as a two-element CBOR array <code>[4, rest]</code> where
 <code>rest</code> is the portion of the URL after <code>"data:"</code>.
           </p>
 
-          <section id="create-data-url-encoder">
-            <h5>Create Data URL Encoder</h5>
+          <section id="encode-data-url"><span id="create-data-url-encoder"></span>
+            <h5>Encode Data URL</h5>
             <p>
-This algorithm takes a string <code>value</code>, and returns an encoder
-object or <code>undefined</code>.
+This algorithm takes a string <code>value</code>, and returns an array
+or <code>undefined</code>.
             </p>
             <ol>
               <li>
 If <code>value</code> does not start with <code>"data:"</code>, return
 <code>undefined</code>.
+              </li>
+              <li>
+Set `base64` to `false`.
               </li>
               <li>
 Attempt to match <code>value</code> against the regular expression
@@ -2891,49 +2893,28 @@ where each <code>.*</code> is greedy (i.e., if the string
 If the match succeeds:
                 <ol>
                   <li>
-Set <code>data</code> to the value of the <code>data</code> capture
+Set <code>mediatype</code> and <code>data</code> to the value of the corresponding capture
 group.
                   </li>
                   <li>
-Verify round-trip integrity: decode <code>data</code> from base64 and
-re-encode to base64. If the result equals <code>data</code>, return an
-encoder object with <code>value</code> and <code>base64</code> set to
+Set <code>dataBytes</code> to the decoding of <code>data</code> from base64 into a byte sequence, or <code>undefined</code> if the decoding fails.
+                  </li>
+                  <li>
+Verify round-trip integrity: if <code>dataBytes</code> is defined, and its encoding to base64 equals <code>data</code> fr, set <code>base64</code> to
 <code>true</code>.
                   </li>
                 </ol>
               </li>
               <li>
-Return an encoder object with <code>value</code> and <code>base64</code>
-set to <code>false</code>.
-              </li>
-            </ol>
-          </section>
-
-          <section>
-            <h5>Encode Data URL</h5>
-            <p>
-This algorithm takes an encoder object from
-<a href="#create-data-url-encoder"></a>, and returns CBOR binary data.
-            </p>
-            <ol>
-              <li>
 Set <code>prefixId</code> to <code>4</code> (the entry for
 <code>"data:"</code> in the <a>URL Prefix Table</a>).
               </li>
               <li>
-If <code>encoderData.base64</code> is <code>true</code>:
+If <code>base64</code> is <code>true</code>:
                 <ol>
                   <li>
-Parse <code>encoderData.value</code> to extract <code>mediatype</code>
-(the substring between <code>"data:"</code> and <code>";base64,"</code>)
-and <code>dataBytes</code> (the binary decoding of the base64 data
-portion).
-                  </li>
-                  <li>
-Return a CBOR encoding of a three-element array
-<code>[prefixId, mediatype, dataBytes]</code>: Major Type 4 (array)
-containing a Major Type 0 integer, a Major Type 3 text string, and a
-Major Type 2 byte string.
+Return a three-element array
+<code>[prefixId, mediatype, dataBytes]</code>.
                   </li>
                 </ol>
               </li>
@@ -2941,13 +2922,12 @@ Major Type 2 byte string.
 Otherwise:
                 <ol>
                   <li>
-Set <code>rest</code> to the substring of <code>encoderData.value</code>
+Set <code>rest</code> to the substring of <code>value</code>
 beginning after <code>"data:"</code>.
                   </li>
                   <li>
-Return a CBOR encoding of a two-element array
-<code>[prefixId, rest]</code>: Major Type 4 (array) containing a
-Major Type 0 integer and a Major Type 3 text string.
+Return a two-element array
+<code>[prefixId, rest]</code>.
                   </li>
                 </ol>
               </li>
@@ -3030,42 +3010,23 @@ The <a>URL Prefix Table</a> entries used by this codec are
 <code>did:key:</code> → <code>1025</code>.
           </aside>
 
-          <section id="create-base58-did-url-encoder">
-            <h5>Create Base58 DID URL Encoder</h5>
-            <p>
-This algorithm takes a string <code>value</code>, and returns an
-encoder object or <code>undefined</code>.
-            </p>
-            <ol>
-              <li>
-For each <code>[prefix, prefixId]</code> pair in the
-<a>URL Prefix Table</a> where the prefix starts with
-<code>"did:"</code>:
-                <ol>
-                  <li>
-If <code>value</code> starts with <code>prefix</code>, return an encoder
-object containing <code>value</code>, <code>prefix</code>, and
-<code>prefixId</code>.
-                  </li>
-                </ol>
-              </li>
-              <li>
-Return <code>undefined</code>.
-              </li>
-            </ol>
-          </section>
-
-          <section>
+          <section id="encode-base58-did-url"><span id="create-base58-did-url-encoder"></span>
             <h5>Encode Base58 DID URL</h5>
             <p>
-This algorithm takes an encoder object from
-<a href="#create-base58-did-url-encoder"></a>, and returns CBOR binary
-data.
+This algorithm takes a string <code>value</code>, and returns an
+array or <code>undefined</code>.
             </p>
             <ol>
               <li>
-Set <code>suffix</code> to the substring of <code>encoderData.value</code>
-beginning after <code>encoderData.prefix</code>.
+Look for a <code>[prefix, prefixId]</code> pair in the
+<a>URL Prefix Table</a> where the prefix starts with
+<code>"did:"</code> and <code>value</code> starts with <code>prefix</code>.
+              <li>
+Otherwise, return <code>undefined</code>.
+              </li>
+              <li>
+Set <code>suffix</code> to the substring of <code>value</code>
+beginning after <code>prefix</code>.
               </li>
               <li>
 Split <code>suffix</code> on the first occurrence of <code>'#'</code>
@@ -3078,8 +3039,8 @@ Set <code>authorityEncoded</code> to the result of applying the
 <code>authority</code>.
               </li>
               <li>
-Initialize <code>entries</code> to
-<code>[encoderData.prefixId, authorityEncoded]</code>.
+Initialize <code>entries</code> to the array
+<code>[prefixId, authorityEncoded]</code>.
               </li>
               <li>
 If <code>fragment</code> is defined:
@@ -3095,8 +3056,7 @@ Append <code>fragmentEncoded</code> to <code>entries</code>.
                 </ol>
               </li>
               <li>
-Return a CBOR encoding of <code>entries</code> as a Major Type 4
-(array).
+Return <code>entries</code>.
               </li>
             </ol>
           </section>
@@ -3105,9 +3065,7 @@ Return a CBOR encoding of <code>entries</code> as a Major Type 4
             <h5>Multibase Base58 to CBOR Token</h5>
             <p>
 The <dfn>Multibase Base58 to CBOR Token</dfn> algorithm takes a string
-<code>str</code> and returns either a Major Type 2 (byte string) CBOR
-token (if the value is a base58btc multibase string) or a Major Type 3
-(text string) CBOR token.
+<code>str</code> and returns either a byte sequence or a string.
             </p>
             <ol>
               <li>
@@ -3115,16 +3073,16 @@ If <code>str</code> starts with <code>'z'</code>:
                 <ol>
                   <li>
 Set <code>decoded</code> to the result of decoding the base58btc content
-of <code>str</code> (i.e. <code>str[1:]</code>).
+of <code>str</code> (i.e. <code>str[1:]</code>) into a byte sequence.
                   </li>
                   <li>
-If decoding succeeds, return a Major Type 2 (byte string) CBOR token
-for <code>decoded</code>.
+If decoding succeeds, return
+<code>decoded</code>.
                   </li>
                 </ol>
               </li>
               <li>
-Return a Major Type 3 (text string) CBOR token for <code>str</code>.
+Return <code>str</code>.
               </li>
             </ol>
           </section>
@@ -3216,10 +3174,9 @@ by this codec.
         </aside>
 
         <section>
-          <h4>Create XSD Date Encoder</h4>
+          <h4>Encode XSD Date</h4>
           <p>
-This algorithm takes a string <code>value</code>, and returns an encoder
-object or <code>undefined</code>.
+This algorithm takes a string <code>value</code>, and returns a value or <code>undefined</code>.
           </p>
           <ol>
             <li>
@@ -3238,22 +3195,8 @@ If <code>parsed</code> is not a valid number, return
 <code>undefined</code>.
             </li>
             <li>
-Return an encoder object containing <code>value</code> and
-<code>parsed</code>.
-            </li>
-          </ol>
-        </section>
-
-        <section>
-          <h4>Encode XSD Date</h4>
-          <p>
-This algorithm takes an encoder object from
-<a href="#create-xsd-date-encoder"></a>, and returns CBOR binary data.
-          </p>
-          <ol>
-            <li>
 Set <code>secondsSinceEpoch</code> to
-<code>floor(encoderData.parsed / 1000)</code>.
+<code>floor(parsed / 1000)</code>.
             </li>
             <li>
 Set <code>reconstituted</code> to the ISO 8601 string for the instant
@@ -3267,19 +3210,10 @@ Set <code>expectedDate</code> to the substring of
             </li>
             <li>
 If <code>encoderData.value</code> is not equal to
-<code>expectedDate</code>, the compression would be lossy. Return a CBOR
-encoding of <code>encoderData.value</code> as a Major Type 3 (text
-string) object.
+<code>expectedDate</code>, the compression would be lossy. Return <code>value</code>.
             </li>
             <li>
-If <code>secondsSinceEpoch</code> is greater than or equal to
-<code>0</code>, return a CBOR encoding of
-<code>secondsSinceEpoch</code> as a Major Type 0 (unsigned integer)
-object.
-            </li>
-            <li>
-Otherwise, return a CBOR encoding of <code>secondsSinceEpoch</code>
-as a Major Type 1 (negative integer) object.
+Otherwise, return <code>secondsSinceEpoch</code>.
             </li>
           </ol>
         </section>
@@ -3693,8 +3627,8 @@ Return `prefix`.
       <section>
         <h2>Get Registry Entry ID Algorithm</h2>
         <p>
-This algorithm takes an encoded CBOR-LD payload `cborldBytes` as input, and returns
-`suffix`, the main data to be decoded, as well as the `registryEntryId` value that
+This algorithm takes a byte sequence `cborldBytes` as input, and returns
+a byte sequence `suffix`, the main data to be decoded, as well as the `registryEntryId` value that
 should be used to decompress `suffix`.
         </p>
         <ol>
