@@ -3443,37 +3443,22 @@ The following multibase encodings are supported:
         </table>
 
         <section>
-          <h4>Create Multibase Encoder</h4>
+          <h4>Encode Multibase</h4>
           <p>
-This algorithm takes a value <code>value</code>, and returns an encoder
-object or <code>undefined</code>.
+This algorithm takes a value <code>value</code>, and returns byte sequence
+or <code>undefined</code>.
           </p>
           <ol>
             <li>
 If <code>value</code> is not a string, return <code>undefined</code>.
             </li>
             <li>
-If the first character of <code>value</code> is <code>'z'</code>,
-<code>'u'</code>, or <code>'M'</code>, return an encoder object
-containing <code>value</code>.
-            </li>
-            <li>
-Otherwise, return <code>undefined</code> (unsupported multibase
-encoding).
-            </li>
-          </ol>
-        </section>
-
-        <section>
-          <h4>Encode Multibase</h4>
-          <p>
-This algorithm takes an encoder object from
-<a href="#create-multibase-encoder"></a>, and returns CBOR binary data.
-          </p>
-          <ol>
-            <li>
 Set <code>prefixChar</code> to the first character of
-<code>encoderData.value</code>.
+<code>value</code>.
+            </li>
+            <li>
+If <code>prefixChar</code> is neither <code>'z'</code>,
+<code>'u'</code>, or <code>'M'</code>, return <code>undefined</code>.
             </li>
             <li>
 Set <code>prefixByte</code> to the <a>Multibase Prefix Byte</a>
@@ -3481,7 +3466,7 @@ corresponding to <code>prefixChar</code>.
             </li>
             <li>
 Set <code>content</code> to the substring of
-<code>encoderData.value</code> beginning after the first character.
+<code>value</code> beginning after the first character.
             </li>
             <li>
 If <code>prefixChar</code> is <code>'z'</code>, set
@@ -3505,8 +3490,7 @@ Set <code>bytes</code> to a byte array of length
 <code>suffixBytes</code>.
             </li>
             <li>
-Return a CBOR encoding of <code>bytes</code> as a Major Type 2 (byte
-string) object.
+Return <code>bytes</code>.
             </li>
           </ol>
         </section>
