@@ -3268,10 +3268,10 @@ Date Codec, the value is only compressed if the compression is lossless
         </p>
 
         <section>
-          <h4>Create XSD DateTime Encoder</h4>
+          <h4>Encode XSD DateTime</h4>
           <p>
-This algorithm takes a string <code>value</code>, and returns an encoder
-object or <code>undefined</code>.
+This algorithm takes a string <code>value</code>, and returns a number, an array,
+or <code>undefined</code>.
           </p>
           <ol>
             <li>
@@ -3289,26 +3289,11 @@ If <code>parsed</code> is not a valid number, return
 <code>undefined</code>.
             </li>
             <li>
-Return an encoder object containing <code>value</code> and
-<code>parsed</code>.
-            </li>
-          </ol>
-        </section>
-
-        <section>
-          <h4>Encode XSD DateTime</h4>
-          <p>
-This algorithm takes an encoder object from
-<a href="#create-xsd-datetime-encoder"></a>, and returns CBOR binary
-data.
-          </p>
-          <ol>
-            <li>
 Set <code>secondsSinceEpoch</code> to
-<code>floor(encoderData.parsed / 1000)</code>.
+<code>floor(parsed / 1000)</code>.
             </li>
             <li>
-If <code>encoderData.value</code> does not contain the character
+If <code>value</code> does not contain the character
 <code>'.'</code> (no millisecond component):
               <ol>
                 <li>
@@ -3318,20 +3303,12 @@ epoch, with the substring <code>".000Z"</code> replaced by
 <code>"Z"</code>.
                 </li>
                 <li>
-If <code>encoderData.value</code> is not equal to
-<code>expectedDate</code>, the compression would be lossy. Return a
-CBOR encoding of <code>encoderData.value</code> as a Major Type 3
-(text string) object.
+If <code>value</code> is not equal to
+<code>expectedDate</code>, the compression would be lossy. Return
+<code>value</code>.
                 </li>
                 <li>
-If <code>secondsSinceEpoch</code> is greater than or equal to
-<code>0</code>, return a CBOR encoding of
-<code>secondsSinceEpoch</code> as a Major Type 0 (unsigned integer)
-object.
-                </li>
-                <li>
-Otherwise, return a CBOR encoding of <code>secondsSinceEpoch</code> as
-a Major Type 1 (negative integer) object.
+Otherwise, return <code>secondsSinceEpoch</code>.
                 </li>
               </ol>
             </li>
@@ -3340,11 +3317,11 @@ Otherwise (millisecond component is present):
               <ol>
                 <li>
 Set <code>millisecondIndex</code> to the index of the first
-<code>'.'</code> in <code>encoderData.value</code>.
+<code>'.'</code> in <code>value</code>.
                 </li>
                 <li>
 Set <code>milliseconds</code> to the integer value of the digits of
-<code>encoderData.value</code> beginning at position
+<code>value</code> beginning at position
 <code>millisecondIndex + 1</code>.
                 </li>
                 <li>
@@ -3353,15 +3330,13 @@ Set <code>expectedDate</code> to the ISO 8601 string for the instant
 since the Unix epoch.
                 </li>
                 <li>
-If <code>encoderData.value</code> is not equal to
-<code>expectedDate</code>, the compression would be lossy. Return a
-CBOR encoding of <code>encoderData.value</code> as a Major Type 3
-(text string) object.
+If <code>value</code> is not equal to
+<code>expectedDate</code>, the compression would be lossy. Return
+<code>value</code>.
                 </li>
                 <li>
-Return a CBOR encoding of the two-element array
-<code>[secondsSinceEpoch, milliseconds]</code>: Major Type 4 (array)
-containing two Major Type 0 (unsigned integer) items.
+Otherwise, return the two-element array
+<code>[secondsSinceEpoch, milliseconds]</code>.
                 </li>
               </ol>
             </li>
