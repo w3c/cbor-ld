@@ -1313,10 +1313,10 @@ Set `encodedData` to the result of <a href="#encode-context"></a>, passing
 `state.typeTable` and `contextValue`.
                 </li>
                 <li>
-If `encodedData` is `undefined`, add `contextValue` to `encodedContexts`.
+If `encodedData` is defined, add `encodedData` to `encodedContexts`.
                 </li>
                 <li>
-Otherwise, add `encodedData` to `encodedContexts`.
+Otherwise, add `contextValue` to `encodedContexts`.
                 </li>
               </ol>
             </li>
@@ -1963,7 +1963,7 @@ Set `currentContext` to `activeContext.previousActiveContext`.
 Set `def` to the value of `term` in `currentContext.termMap`.
                 </li>
                 <li>
-While `def` is not undefined and `def.propagate` is set to `false`:
+While `def` is defined and `def.propagate` is set to `false`:
                   <ol>
                     <li>
 Set `currentContext` to `activeContext.previousActiveContext`.
@@ -1974,7 +1974,7 @@ Set `def` to the value of `term` in `currentContext.termMap`.
                   </ol>
                 </li>
                 <li>
-If `def` is not undefined, set the value of `term` in `newTermMap` to `def`.
+If `def` is defined, set the value of `term` in `newTermMap` to `def`.
                 </li>
               </ol>
             </li>
@@ -2234,7 +2234,7 @@ encode both primitive and non-primitive types as CBOR.
           <h4>Encode Context</h4>
           <p>
 This algorithm takes a map `typeTable` and a value `contextValue` and
-returns an integer or `undefined`.
+returns an optional integer.
           </p>
           <ol>
             <li>
@@ -2523,8 +2523,7 @@ inversion of this table (i.e., a map from integers to URL prefix strings).
           <h4>Encode URL</h4>
           <p>
 This algorithm takes a map <code>state</code>, a map <code>termInfo</code>,
-and a string <code>valueToEncode</code>, and returns either an integer, an array
-or <code>undefined</code>.
+and a string <code>valueToEncode</code>, and optionally returns an integer or an array.
           </p>
           <ol>
             <li>
@@ -2540,15 +2539,14 @@ If <code>termId</code> is defined and is an integer, return it.
             </li>
             <li>
 Attempt to parse <code>valueToEncode</code> as a URL.
-If parsing fails (i.e., the value is not a valid URL), return
-<code>undefined</code>.
+If parsing fails (i.e., the value is not a valid URL), return.
             </li>
             <li>
 Set <code>prefix</code> to the entry in the <a>URL Prefix Table</a>
 such that <code>valueToEncode</code> starts with <code>prefix</code> and
 the remainder of <code>valueToEncode</code> following <code>prefix</code>
 does not contain a "<code>:</code>" (U+003A COLON) character. If no such
-entry exists, return <code>undefined</code> (meaning, no compression is
+entry exists, return (meaning, no compression is
 possible for this URL).
             </li>
             <li>
@@ -2574,7 +2572,7 @@ If <code>prefix</code> is "<code>did:v1:nym:</code>" or
 <code>valueToEncode</code>.
             </li>
             <li>
-Return <code>undefined</code> (meaning, no compression is possible for this URL).
+Return (meaning, no compression is possible for this URL).
             </li>
           </ol>
         </section>
@@ -2583,12 +2581,11 @@ Return <code>undefined</code> (meaning, no compression is possible for this URL
           <h4>Create URL Decoder</h4>
           <p>
 This algorithm takes a map <code>state</code>, a map <code>termInfo</code>,
-and a value <code>valueToDecode</code>, and returns a decoder object or
-<code>undefined</code>.
+and a value <code>valueToDecode</code>, and returns an optional decoder object.
           </p>
           <ol>
             <li>
-If <code>valueToDecode</code> is a string, return <code>undefined</code>
+If <code>valueToDecode</code> is a string, return
 (meaning, value is already an uncompressed URL string; pass through).
             </li>
             <li>
@@ -2630,7 +2627,7 @@ Otherwise, if <code>prefix</code> is "<code>did:v1:nym:</code>" or
 If <code>prefix</code> did not match any of the above (including when
 <code>prefixId</code> has no entry in the
 <a>URL Prefix Reverse Table</a>), or if <code>decoder</code> is
-<code>undefined</code> (meaning, the sub-decoder rejected the shape of
+not defined (meaning, the sub-decoder rejected the shape of
 <code>valueToDecode</code>), throw an
 <code>ERR_UNKNOWN_COMPRESSED_VALUE</code> error.
                 </li>
@@ -2646,7 +2643,7 @@ result of looking up <code>valueToDecode</code> in
 <a href="#decode-url"></a> invocation returns <code>term</code>.
             </li>
             <li>
-Return <code>undefined</code>.
+Return.
             </li>
           </ol>
         </section>
@@ -2686,7 +2683,7 @@ the prefix-stripped portion of the URL as a text string.
             <h5>Encode HTTP URL</h5>
             <p>
 This algorithm takes a string <code>value</code>, and returns an
-array or <code>undefined</code>.
+optional array.
             </p>
             <ol>
               <li>
@@ -2698,7 +2695,7 @@ Otherwise, if <code>value</code> starts with <code>"http://"</code>, set
 <code>prefix</code> to <code>"http://"</code>.
               </li>
               <li>
-Otherwise, return <code>undefined</code>.
+Otherwise, return.
               </li>
               <li>
 Set <code>prefixId</code> to the value of <code>prefix</code>
@@ -2719,7 +2716,7 @@ Return a two-element array
             <h5>Create HTTP URL Decoder</h5>
             <p>
 This algorithm takes a CBOR array <code>valueToDecode</code>, and
-returns a decoder object or <code>undefined</code>.
+returns an optional decoder object.
             </p>
             <ol>
               <li>
@@ -2736,7 +2733,7 @@ Return a decoder object containing <code>prefix</code>.
                 </ol>
               </li>
               <li>
-Otherwise, return <code>undefined</code>.
+Otherwise, return.
               </li>
             </ol>
           </section>
@@ -2773,12 +2770,12 @@ round-tripped through binary form).
           <section>
             <h5>Encode UUID URN</h5>
             <p>
-This algorithm takes a string <code>value</code>, and returns an array or <code>undefined</code>.
+This algorithm takes a string <code>value</code>, and returns an optional array.
             </p>
             <ol>
               <li>
 If <code>value</code> does not start with <code>"urn:uuid:"</code>,
-return <code>undefined</code>.
+return.
               </li>
               <li>
 Set <code>prefixId</code> to <code>3</code> (the entry for
@@ -2819,7 +2816,7 @@ Major Type 0 (unsigned integer) item followed by a Major Type 3
             <h5>Create UUID URN Decoder</h5>
             <p>
 This algorithm takes a CBOR array <code>valueToDecode</code>, and returns
-a decoder object or <code>undefined</code>.
+an optional decoder object.
             </p>
             <ol>
               <li>
@@ -2827,7 +2824,7 @@ If <code>valueToDecode</code> has exactly two elements, and the second
 element is either a byte string or a text string, return a decoder object.
               </li>
               <li>
-Otherwise, return <code>undefined</code>.
+Otherwise, return.
               </li>
             </ol>
           </section>
@@ -2872,13 +2869,11 @@ as a two-element CBOR array <code>[4, rest]</code> where
           <section id="encode-data-url"><span id="create-data-url-encoder"></span>
             <h5>Encode Data URL</h5>
             <p>
-This algorithm takes a string <code>value</code>, and returns an array
-or <code>undefined</code>.
+This algorithm takes a string <code>value</code>, and returns an optional array.
             </p>
             <ol>
               <li>
-If <code>value</code> does not start with <code>"data:"</code>, return
-<code>undefined</code>.
+If <code>value</code> does not start with <code>"data:"</code>, return.
               </li>
               <li>
 Set `base64` to `false`.
@@ -2898,7 +2893,7 @@ Set <code>mediatype</code> and <code>data</code> to the value of the correspondi
 group.
                   </li>
                   <li>
-Set <code>dataBytes</code> to the decoding of <code>data</code> from base64 into a byte sequence, or <code>undefined</code> if the decoding fails.
+Set <code>dataBytes</code> to the decoding of <code>data</code> from base64 into a byte sequence, or leave it undefined if the decoding fails.
                   </li>
                   <li>
 Verify round-trip integrity: if <code>dataBytes</code> is defined, and its encoding to base64 equals <code>data</code> fr, set <code>base64</code> to
@@ -2939,7 +2934,7 @@ Return a two-element array
             <h5>Create Data URL Decoder</h5>
             <p>
 This algorithm takes a CBOR array <code>valueToDecode</code>, and returns
-a decoder object or <code>undefined</code>.
+an optional decoder object.
             </p>
             <ol>
               <li>
@@ -2953,7 +2948,7 @@ the second element is a text string, return a decoder object
 (non-base64 mode).
               </li>
               <li>
-Otherwise, return <code>undefined</code>.
+Otherwise, return.
               </li>
             </ol>
           </section>
@@ -3014,8 +3009,8 @@ The <a>URL Prefix Table</a> entries used by this codec are
           <section id="encode-base58-did-url"><span id="create-base58-did-url-encoder"></span>
             <h5>Encode Base58 DID URL</h5>
             <p>
-This algorithm takes a string <code>value</code>, and returns an
-array or <code>undefined</code>.
+This algorithm takes a string <code>value</code>, and returns an optional
+array.
             </p>
             <ol>
               <li>
@@ -3023,7 +3018,7 @@ Look for a <code>[prefix, prefixId]</code> pair in the
 <a>URL Prefix Table</a> where the prefix starts with
 <code>"did:"</code> and <code>value</code> starts with <code>prefix</code>.
               <li>
-Otherwise, return <code>undefined</code>.
+Otherwise, return.
               </li>
               <li>
 Set <code>suffix</code> to the substring of <code>value</code>
@@ -3092,7 +3087,7 @@ Return <code>str</code>.
             <h5>Create Base58 DID URL Decoder</h5>
             <p>
 This algorithm takes a CBOR array <code>valueToDecode</code>, and returns
-a decoder object or <code>undefined</code>.
+a decoder object.
             </p>
             <ol>
               <li>
@@ -3108,7 +3103,7 @@ Return a decoder object containing <code>prefix</code>.
                 </ol>
               </li>
               <li>
-Otherwise, return <code>undefined</code>.
+Otherwise, return.
               </li>
             </ol>
           </section>
@@ -3177,12 +3172,12 @@ by this codec.
         <section>
           <h4>Encode XSD Date</h4>
           <p>
-This algorithm takes a string <code>value</code>, and returns a string, a number, or <code>undefined</code>.
+This algorithm takes a string <code>value</code>, and optionally returns a string or a number.
           </p>
           <ol>
             <li>
 If <code>value</code> contains the character <code>'T'</code> (indicating
-a time component), return <code>undefined</code> (this value is
+a time component), return (this value is
 compressed instead by the <a href="#xsd-datetime-codec">XSD DateTime
 Codec</a>).
             </li>
@@ -3192,8 +3187,7 @@ an ISO 8601 date string, expressed as the number of milliseconds since
 the Unix epoch.
             </li>
             <li>
-If <code>parsed</code> is not a valid number, return
-<code>undefined</code>.
+If <code>parsed</code> is not a valid number, return.
             </li>
             <li>
 Set <code>secondsSinceEpoch</code> to
@@ -3222,8 +3216,8 @@ Otherwise, return <code>secondsSinceEpoch</code>.
         <section>
           <h4>Create XSD Date Decoder</h4>
           <p>
-This algorithm takes a value <code>valueToDecode</code>, and returns a
-decoder object or <code>undefined</code>.
+This algorithm takes a value <code>valueToDecode</code>, and optionally returns a
+decoder object.
           </p>
           <ol>
             <li>
@@ -3231,7 +3225,7 @@ If <code>valueToDecode</code> is an integer (positive, negative, or
 zero), return a decoder object.
             </li>
             <li>
-Otherwise, return <code>undefined</code>.
+Otherwise, return.
             </li>
           </ol>
         </section>
@@ -3270,13 +3264,12 @@ Date Codec, the value is only compressed if the compression is lossless
         <section>
           <h4>Encode XSD DateTime</h4>
           <p>
-This algorithm takes a string <code>value</code>, and returns a number, an array,
-or <code>undefined</code>.
+This algorithm takes a string <code>value</code>, and optionally returns a number or an array.
           </p>
           <ol>
             <li>
 If <code>value</code> does not contain the character <code>'T'</code>,
-return <code>undefined</code> (this value is compressed instead by the
+return (this value is compressed instead by the
 <a href="#xsd-date-codec">XSD Date Codec</a>).
             </li>
             <li>
@@ -3285,8 +3278,7 @@ ISO 8601 datetime string, expressed as the number of milliseconds since
 the Unix epoch.
             </li>
             <li>
-If <code>parsed</code> is not a valid number, return
-<code>undefined</code>.
+If <code>parsed</code> is not a valid number, return.
             </li>
             <li>
 Set <code>secondsSinceEpoch</code> to
@@ -3346,8 +3338,8 @@ Otherwise, return the two-element array
         <section>
           <h4>Create XSD DateTime Decoder</h4>
           <p>
-This algorithm takes a value <code>valueToDecode</code>, and returns a
-decoder object or <code>undefined</code>.
+This algorithm takes a value <code>valueToDecode</code>, and returns an optional
+decoder object.
           </p>
           <ol>
             <li>
@@ -3358,7 +3350,7 @@ If <code>valueToDecode</code> is an array of exactly two elements where
 both elements are numbers, return a decoder object.
             </li>
             <li>
-Otherwise, return <code>undefined</code>.
+Otherwise, return.
             </li>
           </ol>
         </section>
@@ -3445,12 +3437,11 @@ The following multibase encodings are supported:
         <section>
           <h4>Encode Multibase</h4>
           <p>
-This algorithm takes a value <code>value</code>, and returns byte sequence
-or <code>undefined</code>.
+This algorithm takes a value <code>value</code>, and returns an optional byte sequence.
           </p>
           <ol>
             <li>
-If <code>value</code> is not a string, return <code>undefined</code>.
+If <code>value</code> is not a string, return.
             </li>
             <li>
 Set <code>prefixChar</code> to the first character of
@@ -3458,7 +3449,7 @@ Set <code>prefixChar</code> to the first character of
             </li>
             <li>
 If <code>prefixChar</code> is neither <code>'z'</code>,
-<code>'u'</code>, or <code>'M'</code>, return <code>undefined</code>.
+<code>'u'</code>, or <code>'M'</code>, return.
             </li>
             <li>
 Set <code>prefixByte</code> to the <a>Multibase Prefix Byte</a>
@@ -3498,20 +3489,19 @@ Return <code>bytes</code>.
         <section>
           <h4>Create Multibase Decoder</h4>
           <p>
-This algorithm takes a value <code>valueToDecode</code>, and returns a
-decoder object or <code>undefined</code>.
+This algorithm takes a value <code>valueToDecode</code>, and returns an optional
+decoder object.
           </p>
           <ol>
             <li>
-If <code>valueToDecode</code> is not a byte string, return
-<code>undefined</code>.
+If <code>valueToDecode</code> is not a byte string, return.
             </li>
             <li>
 If the first byte of <code>valueToDecode</code> is <code>0x7a</code>,
 <code>0x75</code>, or <code>0x4d</code>, return a decoder object.
             </li>
             <li>
-Otherwise, return <code>undefined</code> (unsupported multibase
+Otherwise, return (unsupported multibase
 prefix byte).
             </li>
           </ol>
