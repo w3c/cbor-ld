@@ -1037,7 +1037,8 @@ Otherwise, set `objectTypes` to the result of
 passing `state`, `activeContext`, and `input`.
           </li>
           <li>
-Set `activeContext` to the result of passing `activeContext` and `objectTypes` to
+Set `activeContext` to `result.activeContext`, and `state` to `result.state`, for
+`result` returned from passing `state, `activeContext`, and `objectTypes` to
 <a href="#apply-type-scoped-contexts-algorithm"></a>.
           </li>
           <li>
@@ -1697,7 +1698,7 @@ Return `result`.
           </ol>
         </section>
         <section>
-          <h3>Apply Type Scoped Contexts Algorithm</h3>
+          <h3>Apply Type-Scoped Contexts Algorithm</h3>
           <p>
 This algorithm takes maps `state`, `activeContext` ,and a set `objectTypes` as inputs, and
 returns a map `result` containing maps `state` and `activeContext`.
