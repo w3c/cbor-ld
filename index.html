@@ -819,7 +819,7 @@ the registry repository maintainers on a "first-come, first-served" basis, witho
   </section>
   <section class="normative introductory" id="internal-representation">
     <h2>Internal Representation</h2>
-    <p>Following  [[[JSON-LD11-API]]] [[JSON-LD11-API]],
+    <p>Following [[[JSON-LD11-API]]] [[JSON-LD11-API]],
       this specification describes the processing of JSON-LD documents and CBOR-LD documents in terms of an abtract
       <dfn data-cite="JSON-LD11-API#dfn-internal-representation">internal representation</dfn>.
     </p>
@@ -836,10 +836,10 @@ the registry repository maintainers on a "first-come, first-served" basis, witho
       this specification uses <dfn data-cite="INFRA#byte-sequence">byte sequences</dfn>.
     </p>
 
-    <p>Note also that, while JSON only allows strings to be keys of a map,
-      CBOR allows to use any type in that role, including numbers.</p>
+    <p>Also note that, while JSON only allows strings to be keys of a map,
+      CBOR allows values of any type to be keys of a map, including numbers.</p>
 
-    <p>Note also that the output of the <a href="#cbor-ld-to-json-ld-decoding-algorithm"></a>
+    <p>Also note that the output of the <a href="#cbor-ld-to-json-ld-decoding-algorithm"></a>
       will never contain any of these extensions,
       and can therefore be handled by JSON-LD processors as defined by [[[JSON-LD11-API]]] [[JSON-LD11-API]].</p>
 
@@ -852,9 +852,9 @@ the registry repository maintainers on a "first-come, first-served" basis, witho
         </li>
         <li>A data item with major type 2 (binary string) is parsed as a [=byte sequence=].</li>
         <li>A data item with major type 3 (text string) is parsed as a [=string=].</li>
-        <li>A data item with major type 4 (array) is parsed as an [=array=],
+        <li>A data item with major type 4 (array) is parsed as an [=array=]
           whose items are parsed by recursively applying these rules.</li>
-        <li>A data item with major type 5 (map) is parsed as a [=map=],
+        <li>A data item with major type 5 (map) is parsed as a [=map=]
           whose keys and values are parsed by recursively applying these rules.</li>
         <li>A data item with major type 7 (primitive) is parsed as:<ul>
           <li>the [=boolean=] value `false` if the additional type value is 20
@@ -867,7 +867,8 @@ the registry repository maintainers on a "first-come, first-served" basis, witho
       </ul>
       <p class="note">
         It should be noted that CBOR tags (major type 6) are not parsed into the internal representation.
-         CBOR-LD does not use CBOR tags, except at the top level, and this tag is managed in an ad-hoc fashion in Section&nbsp;<a href="#get-registry-entry-id-algorithm"></a>.
+         CBOR-LD does not use CBOR tags, except at the top level,
+         and this tag is managed in an ad-hoc fashion in Section&nbsp;<a href="#get-registry-entry-id-algorithm"></a>.
       </p>
     </section>
 
@@ -876,11 +877,12 @@ the registry repository maintainers on a "first-come, first-served" basis, witho
       <ul>
         <li id="serialize-null-bool">
           [=Null=] and [=boolean=] values are serialized with major type 7,
-          and additional type value 22 for `null`, 20 for `false` and 21 for `true`.
+          and additional type value 22 for `null`, 20 for `false`, and 21 for `true`.
         </li>
         <li id="serialize-int">
-          [=Numbers=] that are <a data-cite="ECMASCRIPT#sec-number.issafeinteger">safe integers</a>,
-          that is, that have no fractional part and with a value between -(2<sup>53</sup>-1) and 2<sup>53</sup>-1 inclusive,
+          [=Numbers=] that are <a data-cite="ECMASCRIPT#sec-number.issafeinteger">safe integers</a>
+          &mdash; that is, that have no fractional part and have a value between -(2<sup>53</sup>-1) and
+          2<sup>53</sup>-1 inclusive &mdash;
           are serialized as CBOR integers (major types 0 and 1 depending on their sign),
           choosing the shortest form.
         </li>
@@ -890,7 +892,7 @@ the registry repository maintainers on a "first-come, first-served" basis, witho
           Preferably,
           the shortest exact floating-point representation is used;
           for instance, 1.5 is represented in a 16-bit floating-point value
-          (not all implementations will be capable of efficiently finding the minimum form, though).
+          (although some implementations may not be capable of efficiently finding the minimum form).
         </li>
         <li id="serialize-string">
           [=Strings=] are serialized as CBOR UTF-8 text strings (major type 3).
@@ -953,15 +955,17 @@ Set `output` to the result of passing `state` and `jsonldDocument`
 as `inputDocuments` to <a href="#convert-document-algorithm"></a>.
             </li>
             <li>
-Set `suffix` to the <a href="#serializing-the-internal-representation-in-cbor">CBOR serialization</a> of `output`.
+Set `suffix` to the <a href="#serializing-the-internal-representation-in-cbor">CBOR serialization</a>
+of `output`.
             </li>
           </ol>
           </li>
           <li>
-Otherwise, set `suffix` to the <a href="#serializing-the-internal-representation-in-cbor">CBOR serialization</a> of `jsonldDocument`.
+Otherwise, set `suffix` to the <a href="#serializing-the-internal-representation-in-cbor">CBOR serialization</a>
+of `jsonldDocument`.
           </li>
           <li>
-Set `cborldBytes` the concatenation of `prefix` and `suffix`.
+Set `cborldBytes` to the concatenation of `prefix` and `suffix`.
           </li>
           <li>
 Return `cborldBytes`.
@@ -971,7 +975,8 @@ Return `cborldBytes`.
       <section>
         <h3>CBOR-LD to JSON-LD Decoding Algorithm</h3>
         <p>
-This algorithm takes a CBOR-LD payload `cborldBytes` as a byte sequence, and returns a JSON-LD document `jsonldDocument`.
+This algorithm takes a CBOR-LD payload `cborldBytes` as a byte sequence,
+and returns a JSON-LD document `jsonldDocument`.
         </p>
         <ol>
           <li>
@@ -1000,7 +1005,8 @@ Set `state` to the result of passing `state` to
 <a href="#initialize-conversion-algorithm"></a>.
             </li>
             <li>
-Set `input` to the result of <a href="#parsing-cbor-into-the-internal-representation">parsing</a> `suffix` from CBOR bytes. If the result is not a map or an array, throw an error
+Set `input` to the result of <a href="#parsing-cbor-into-the-internal-representation">parsing</a>
+`suffix` from CBOR bytes. If the result is not a map or an array, throw an error
 `ERR_INVALID_PAYLOAD_STRUCTURE`.
             </li>
             <li>
@@ -1010,7 +1016,8 @@ to <a href="#convert-document-algorithm"></a>.
           </ol>
           </li>
           <li>
-Otherwise, set `jsonldDocument` to the result of <a href="#parsing-cbor-into-the-internal-representation">parsing</a> `suffix` from CBOR bytes to a map.
+Otherwise, set `jsonldDocument` to the result of <a href="#parsing-cbor-into-the-internal-representation">parsing</a>
+`suffix` from CBOR bytes to a map.
           </li>
           <li>
 Return `jsonldDocument`.
@@ -2896,7 +2903,8 @@ group.
 Set <code>dataBytes</code> to the decoding of <code>data</code> from base64 into a byte sequence, or leave it undefined if the decoding fails.
                   </li>
                   <li>
-Verify round-trip integrity: if <code>dataBytes</code> is defined, and its encoding to base64 equals <code>data</code> fr, set <code>base64</code> to
+Verify round-trip integrity: if <code>dataBytes</code> is defined,
+and its encoding to base64 equals <code>data</code> fr, set <code>base64</code> to
 <code>true</code>.
                   </li>
                 </ol>
@@ -3578,7 +3586,7 @@ Return `prefix`.
         <h2>Get Registry Entry ID Algorithm</h2>
         <p>
 This algorithm takes a byte sequence `cborldBytes` as input, and returns
-a byte sequence `suffix`, the main data to be decoded, as well as the `registryEntryId` value that
+a byte sequence `suffix`, the main data to be decoded, and the `registryEntryId` value that
 should be used to decompress `suffix`.
         </p>
         <ol>
