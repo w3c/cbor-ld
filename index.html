@@ -1513,7 +1513,7 @@ If `term` does not have an entry in `state`.`termToId`, set `termId` to `term`.
 Otherwise, set `termId` to the value of `term` in `state`.`termToId`.
                 </li>
                 <li>
-If `termId` is present in `input`, set `value` to the value of `termId` in `input`.
+If `termId` is present in `input`, set `value` to the value of `termId` in `input`, and set `plural` to false.
                 </li>
                 <li>
 Otherwise, if `termId` is a number and `termId` plus 1 is  present in `input`, set `value` to the value of `termId` plus 1 in `input`, and set `plural` to `true`.
