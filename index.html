@@ -473,17 +473,28 @@ Determine whether JSON-LD can be compressed (find `@context` values in JSON-LD d
 that reference contexts via URIs; embedded context values cannot be compressed).
       </li>
       <li>
-Process the JSON-LD contexts, building a CBOR-LD term-codec map — a list
-of all terms that can be compressed. Sort the list (into Unicode code point order).
-Associate byte values with each term, starting at 0 and counting up.
+Process the JSON-LD contexts the document uses, including any type-scoped and
+property-scoped contexts, in the order in which the algorithms in
+<a href="#algorithms"></a> apply them, building a CBOR-LD term-codec map from terms to
+integers called term identifiers. The terms defined by each context are taken in Unicode
+code point order, and each term that does not yet have a term identifier is assigned the
+next one, starting at 100 and increasing by 2 (see <a href="#add-context-algorithm"></a>).
+JSON-LD keywords have fixed, even term identifiers below 100; for example, `@context` is 0
+and `@type` is 2 (see <a href="#initialize-context-loader-algorithm"></a>). Because the
+producer and the consumer process the same contexts in the same order, they derive the same
+term-codec map.
       </li>
       <li>
-Encode the JSON-LD Document into CBOR-LD. This consists of replacing every key with
-the byte value associated with the term from the term-codec map.
+Encode the JSON-LD Document into CBOR-LD. This consists of replacing every key that has an
+entry in the term-codec map with its term identifier. When the value of the key is an array,
+the term identifier plus 1 is used instead, so an odd key indicates an array of values. Keys
+that are not in the term-codec map are carried through as text strings.
       </li>
       <li>
 If and when the original JSON-LD is required, decoding from CBOR-LD to JSON-LD consists
-of replacing every CBOR byte value with the associated key from the term-codec map.
+of replacing every integer value with the associated term from the term-codec map: an even value
+is the term identifier itself, and an odd value is the term identifier plus 1, indicating that
+the value associated with the term is an array.
       </li>
     </ol>
   </section>
@@ -557,7 +568,10 @@ applies.
         <dd>
 OPTIONAL. A boolean indicating whether semantic compression is applied to JSON-LD terms. When
 absent, its value is `true`. When `true`, term identifiers are auto-generated as described in
-<a href="#semantic-compression"></a>.
+<a href="#semantic-compression"></a>. When `false`, keys are carried as text strings, and the
+algorithms in <a href="#algorithms"></a> still apply any codecs and registry dictionaries,
+except that a codec is not applied to a single value whose compressed form would be an
+[=array=] (see <a href="#encode-value"></a>).
         </dd>
         <dt>`codecs`</dt>
         <dd>
@@ -681,11 +695,377 @@ externally.
     </section>
   </section>
 
+  <section class="informative">
+    <h1>Choosing Compression Strategies</h1>
+    <p>
+CBOR-LD provides three independent compression strategies: semantic compression, codecs, and
+registry dictionaries (see <a href="#basic-concept"></a>). This section applies every
+combination of them to the same JSON-LD document, shows what each one contributes, and
+describes the trade-offs to weigh when choosing a combination for a particular use case.
+    </p>
+
+    <section>
+      <h2>Example Input</h2>
+      <p>
+The example uses the following example JSON-LD context, which is assumed to be published at
+`https://example.org/contexts/ticket/v1` and to be available to both the producer and the
+consumer of the CBOR-LD payload:
+      </p>
+      <pre class="example" title="A JSON-LD context for event tickets">
+{
+  "@context": {
+    "@protected": true,
+    "id": "@id",
+    "type": "@type",
+    "EventTicket": "https://example.org/vocab#EventTicket",
+    "barcodeDigest": {
+      "@id": "https://example.org/vocab#barcodeDigest",
+      "@type": "https://w3id.org/security#multibase"
+    },
+    "event": {
+      "@id": "https://example.org/vocab#event",
+      "@type": "@id"
+    },
+    "holder": {
+      "@id": "https://example.org/vocab#holder",
+      "@type": "@id"
+    },
+    "seat": "https://example.org/vocab#seat",
+    "ticketClass": {
+      "@id": "https://example.org/vocab#ticketClass",
+      "@type": "https://example.org/vocab#TicketClass"
+    },
+    "validFrom": {
+      "@id": "https://example.org/vocab#validFrom",
+      "@type": "http://www.w3.org/2001/XMLSchema#dateTime"
+    },
+    "validUntil": {
+      "@id": "https://example.org/vocab#validUntil",
+      "@type": "http://www.w3.org/2001/XMLSchema#dateTime"
+    }
+  }
+}
+      </pre>
+      <p>
+The document to be compressed is an event ticket that uses this context. Serialized as JSON
+without insignificant whitespace, it is 435 bytes long.
+      </p>
+      <pre class="example" title="A JSON-LD document describing an event ticket">
+{
+  "@context": "https://example.org/contexts/ticket/v1",
+  "id": "urn:uuid:188e8450-269e-11eb-b545-d3692cf35398",
+  "type": "EventTicket",
+  "event": "https://events.example/2027/annual-conference",
+  "holder": "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK",
+  "seat": "B14",
+  "ticketClass": "general-admission",
+  "validFrom": "2027-03-01T09:00:00Z",
+  "validUntil": "2027-03-03T18:00:00Z",
+  "barcodeDigest": "zQmZgHNUQJ1Z59J1f3BRigCYhPaV1hPY5cyFR92pP5m6U2V"
+}
+      </pre>
+      <p>
+Where registry dictionaries are used, the <a>CBOR-LD Registry Entry</a> contains the
+following `typeTables`: one dictionary for the context URL, one for a URL that appears in
+every ticket for the event, and one for the values of the
+`https://example.org/vocab#TicketClass` type.
+      </p>
+      <pre class="example" title="Registry dictionaries used by the example">
+typeTables:
+  context:
+    "https://example.org/contexts/ticket/v1": 1
+  url:
+    "https://events.example/2027/annual-conference": 1
+  "https://example.org/vocab#TicketClass":
+    general-admission: 1
+    vip: 2
+      </pre>
+    </section>
+
+    <section>
+      <h2>Results</h2>
+      <p>
+The table below gives the size of the encoded document for each combination of strategies.
+Each combination corresponds to a registry entry whose `processingModel` enables or disables
+semantic compression and the codecs defined in this specification, and whose `typeTables`
+either contain the dictionaries above or are empty. The sizes count only the encoded
+document, which is the second element of the tagged array described in
+<a href="#cbor-tags-for-cbor-ld"></a>. The tag, the array header, and the registry entry ID
+add between 5 and 9 bytes to every row, depending on the registry entry ID.
+      </p>
+      <table class="simple">
+        <thead>
+          <tr>
+            <th>Semantic compression</th>
+            <th>Codecs</th>
+            <th>Registry dictionaries</th>
+            <th>Size (bytes)</th>
+            <th>Size relative to JSON-LD</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="3">JSON-LD (baseline)</td>
+            <td>435</td>
+            <td>100%</td>
+          </tr>
+          <tr>
+            <td>No</td>
+            <td>No</td>
+            <td>No</td>
+            <td>400</td>
+            <td>92%</td>
+          </tr>
+          <tr>
+            <td>Yes</td>
+            <td>No</td>
+            <td>No</td>
+            <td>337</td>
+            <td>77%</td>
+          </tr>
+          <tr>
+            <td>No</td>
+            <td>Yes</td>
+            <td>No</td>
+            <td>356</td>
+            <td>82%</td>
+          </tr>
+          <tr>
+            <td>No</td>
+            <td>No</td>
+            <td>Yes</td>
+            <td>299</td>
+            <td>69%</td>
+          </tr>
+          <tr>
+            <td>Yes</td>
+            <td>Yes</td>
+            <td>No</td>
+            <td>231</td>
+            <td>53%</td>
+          </tr>
+          <tr>
+            <td>Yes</td>
+            <td>No</td>
+            <td>Yes</td>
+            <td>236</td>
+            <td>54%</td>
+          </tr>
+          <tr>
+            <td>No</td>
+            <td>Yes</td>
+            <td>Yes</td>
+            <td>255</td>
+            <td>59%</td>
+          </tr>
+          <tr>
+            <td>Yes</td>
+            <td>Yes</td>
+            <td>Yes</td>
+            <td>136</td>
+            <td>31%</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+Several things are visible in these results:
+      </p>
+      <ul>
+        <li>
+Encoding the document as CBOR without any of the strategies saves only 35 bytes (8%). CBOR
+removes the punctuation of JSON but leaves every key and value as text.
+        </li>
+        <li>
+Each strategy is useful on its own, and each acts on a different part of the document:
+semantic compression on keys, codecs on values whose type has a codec, and registry
+dictionaries on particular values listed in advance. On their own, registry dictionaries
+save 101 bytes, semantic compression 63 bytes, and codecs 44 bytes. With all three enabled,
+the document shrinks to 136 bytes, 31% of its size as JSON.
+        </li>
+        <li>
+Codecs do considerably more when semantic compression is also enabled: 106 bytes instead of
+44. Without semantic compression, a codec is not applied to a single value whose compressed
+form would be a CBOR array, because a decoder could not tell it from an array of values (see
+<a href="#encode-value"></a>). In this document, that leaves the `id`, `holder`, and
+`event` URLs uncompressed. In addition, the URL codec encodes the `type` value `EventTicket`
+as its term identifier, which exists only when semantic compression is enabled.
+        </li>
+        <li>
+Codecs and registry dictionaries overlap where both apply to the same value. The `event` URL
+can be compressed by either the URL codec or the `url` dictionary; the dictionary entry takes
+precedence, so enabling the codec as well saves nothing further for that value.
+        </li>
+        <li>
+Only a registry dictionary can compress the context URL itself, because no codec applies to
+`@context` values (see <a href="#context-codec"></a>).
+        </li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Encoded Examples</h2>
+      <p>
+The following examples show the encoded document, in CBOR diagnostic notation [[RFC8949]],
+as the strategies are enabled one at a time: first none of them, then semantic compression,
+then codecs, and then registry dictionaries. In each example, the parts changed by the newly
+enabled strategy are highlighted. The entries are listed in the same order in every example,
+so that they can be compared line by line, and only the encoded document is shown, without
+the CBOR-LD tag and registry entry ID.
+      </p>
+      <pre class="example nohighlight" title="No compression strategies (400 bytes)">
+{
+  "@context": "https://example.org/contexts/ticket/v1",
+  "barcodeDigest": "zQmZgHNUQJ1Z59J1f3BRigCYhPaV1hPY5cyFR92pP5m6U2V",
+  "event": "https://events.example/2027/annual-conference",
+  "holder": "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK",
+  "id": "urn:uuid:188e8450-269e-11eb-b545-d3692cf35398",
+  "seat": "B14",
+  "ticketClass": "general-admission",
+  "type": "EventTicket",
+  "validFrom": "2027-03-01T09:00:00Z",
+  "validUntil": "2027-03-03T18:00:00Z"
+}
+      </pre>
+      <p>
+Without any of the strategies, every key and every value is a text string.
+      </p>
+      <pre class="example nohighlight" title="Semantic compression (337 bytes)">
+{
+  ****0****: "https://example.org/contexts/ticket/v1",
+  ****102****: "zQmZgHNUQJ1Z59J1f3BRigCYhPaV1hPY5cyFR92pP5m6U2V",
+  ****104****: "https://events.example/2027/annual-conference",
+  ****106****: "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK",
+  ****108****: "urn:uuid:188e8450-269e-11eb-b545-d3692cf35398",
+  ****110****: "B14",
+  ****112****: "general-admission",
+  ****114****: "EventTicket",
+  ****116****: "2027-03-01T09:00:00Z",
+  ****118****: "2027-03-03T18:00:00Z"
+}
+      </pre>
+      <p>
+Semantic compression replaces each key with its term identifier (see
+<a href="#semantic-compression"></a>). `@context` is 0, and the terms defined by the context
+are numbered in code point order, starting at 100 and increasing by 2: `EventTicket` is 100,
+`barcodeDigest` 102, `event` 104, `holder` 106, `id` 108, `seat` 110, `ticketClass` 112,
+`type` 114, `validFrom` 116, and `validUntil` 118. The values are unchanged.
+      </p>
+      <pre class="example nohighlight" title="Semantic compression and codecs (231 bytes)">
+{
+  0: "https://example.org/contexts/ticket/v1",
+  102: ****h'7a1220a8780b7af7226216552a7da2c7b3acdc808d10637d19e009ecdb6d1fc624532a'****,
+  104: ****[2, "events.example/2027/annual-conference"]****,
+  106: ****[1025, h'ed012e6fcce36701dc791488e0d0b1745cc1e33a4c1c9fcc41c63bd343dbbe0970e6']****,
+  108: ****[3, h'188e8450269e11ebb545d3692cf35398']****,
+  110: "B14",
+  112: "general-admission",
+  114: ****100****,
+  116: ****1803891600****,
+  118: ****1804096800****
+}
+      </pre>
+      <p>
+Codecs replace the values of the types they handle with more compact forms:
+      </p>
+      <ul>
+        <li>
+The <a href="#multibase-codec">Multibase Codec</a> decodes the base58btc `barcodeDigest`
+into bytes, keeping the multibase prefix as the first byte (`7a`).
+        </li>
+        <li>
+The <a href="#url-codec">URL Codec</a> replaces the `https://`, `did:key:`, and `urn:uuid:`
+prefixes with the integers 2, 1025, and 3, and converts the key and the UUID to bytes. It
+also encodes the `type` value `EventTicket` as its term identifier, 100.
+        </li>
+        <li>
+The <a href="#xsd-datetime-codec">XSD DateTime Codec</a> encodes `validFrom` and
+`validUntil` as seconds since the Unix epoch.
+        </li>
+      </ul>
+      <pre class="example nohighlight" title="Semantic compression, codecs, and registry dictionaries (136 bytes)">
+{
+  0: ****1****,
+  102: h'7a1220a8780b7af7226216552a7da2c7b3acdc808d10637d19e009ecdb6d1fc624532a',
+  104: ****h'01'****,
+  106: [1025, h'ed012e6fcce36701dc791488e0d0b1745cc1e33a4c1c9fcc41c63bd343dbbe0970e6'],
+  108: [3, h'188e8450269e11ebb545d3692cf35398'],
+  110: "B14",
+  112: ****1****,
+  114: 100,
+  116: 1803891600,
+  118: 1804096800
+}
+      </pre>
+      <p>
+The registry dictionaries replace the context URL, the `event` URL, and the ticket class with
+their dictionary entries. The `event` entry is the byte string `h'01'` rather than the integer
+1 because dictionary entries for URLs are encoded as bytes, which keeps them distinct from the
+term identifiers that the URL Codec produces.
+      </p>
+    </section>
+
+    <section>
+      <h2>Choosing a Combination</h2>
+      <p>
+Semantic compression applies to terms defined in context documents, which are typically keys.
+For values, the registry dictionaries are consulted first, then the codec bound to the value's
+type, and if neither applies, the value is carried through unchanged (see <a href="#value-codec"></a>).
+      </p>
+      <p>
+When the goal is the smallest possible output, enabling all three compression mechanisms is optimal
+for essentially all inputs. How much each strategy contributes depends on the data; semantic compression
+is most valuable for documents with many properties and/or long terms, codecs are most valuable 
+for documents with many values that have types for which codecs exist (e.g URLs, dates, and multibase-encoded values),
+and registry dictionaries are most valuable for documents with large values that recur across many
+documents in a use case, such as context URLs and key material.
+      </p>
+      <p>
+Output size is not the only consideration. Each strategy has costs that can lead a use case
+to enable only some of them and accept a larger payload:
+      </p>
+      <dl>
+        <dt>Semantic compression</dt>
+        <dd>
+Term identifiers are derived from the complete contents of every context a document uses.
+The producer and the consumer therefore need identical copies of those contexts. It also
+adds work to both encoding and decoding, and because keys become integers, the payload cannot
+be read meaningfully with general-purpose CBOR tools. However, in most cases it is the
+most powerful general-purpose compression tool that CBOR-LD uses.
+        </dd>
+        <dt>Codecs</dt>
+        <dd>
+Codecs are inexpensive transformations of individual values and need no shared data beyond
+the codec definitions. A consumer must, however, implement every codec named by the
+<a>processing model</a>, and compressed values (dates as integers, identifiers as raw bytes)
+are not readable with general-purpose CBOR tools. Like semantic compression, codecs rely on
+the term definitions in a document's contexts to determine the type of each value.
+        </dd>
+        <dt>Registry dictionaries</dt>
+        <dd>
+Dictionary lookups are the cheapest operation at encoding and decoding time, and
+dictionaries give the largest savings for long values that recur. However, every value has
+to be known in advance and listed in a registry entry, every consumer needs the same
+dictionaries to decode a payload, and adding a value requires a new registry entry or an
+update to a provisional one. Dictionaries therefore suit stable, use-case-specific values
+and are of little use for values that vary from one document to the next.
+        </dd>
+      </dl>
+      <p>
+In general, applications that need the most compact payload, such as those that embed data
+in QR codes, NFC tags, or messages on constrained networks, will want all three strategies.
+Applications that place more weight on processing cost, implementation simplicity,
+independence from shared tables, or readability with general-purpose CBOR tools may enable
+fewer of them. As the table above shows, codecs and registry dictionaries without semantic
+compression still reduced the example document to 59% of its size as JSON.
+      </p>
+    </section>
+  </section>
+
   <section class="normative">
     <h1>CBOR Tags for CBOR-LD</h1>
     <p>
-CBOR-LD payloads need to be identifiable as such at the binary level. CBOR natively supports
-this via its "tag" feature — a header value in the binary data that describes the rest of the
+CBOR-LD payloads need to be identifiable as such at the binary level. CBOR [[!RFC8949]]
+natively supports this via its "tag" feature — a header value in the binary data that describes the rest of the
 payload via a global registry.
     </p>
     <p>
@@ -817,18 +1197,121 @@ the registry repository maintainers on a "first-come, first-served" basis, witho
       </section>
     </section>
   </section>
+  <section class="normative introductory" id="internal-representation">
+    <h2>Internal Representation</h2>
+    <p>Following [[[JSON-LD11-API]]] [[JSON-LD11-API]],
+      this specification describes the processing of JSON-LD documents and CBOR-LD documents in terms of an abtract
+      <dfn data-cite="JSON-LD11-API#dfn-internal-representation">internal representation</dfn>.
+    </p>
+
+    <p>In order to represent CBOR-specific data structures, we need to extend JSON-LD's internal representation.
+      In addition to
+      <dfn data-cite="INFRA#list">arrays</dfn>,
+      <dfn data-cite="INFRA#ordered-map">maps</dfn>,
+      <dfn data-cite="INFRA#javascript-string">strings</dfn>,
+      <dfn data-cite="ECMASCRIPT#sec-terms-and-definitions-number-value">numbers</dfn>,
+      <dfn data-cite="INFRA#boolean">booleans</dfn>,
+      and
+      <dfn data-cite="INFRA#nulls">nulls</dfn>,
+      this specification uses <dfn data-cite="INFRA#byte-sequence">byte sequences</dfn>.
+    </p>
+
+    <p>Also note that, while JSON only allows strings to be keys of a map,
+      CBOR allows values of any type to be keys of a map, including numbers.</p>
+
+    <p>Also note that the output of the <a href="#cbor-ld-to-json-ld-decoding-algorithm"></a>
+      will never contain any of these extensions,
+      and can therefore be handled by JSON-LD processors as defined by [[[JSON-LD11-API]]] [[JSON-LD11-API]].</p>
+
+    <section>
+      <h2>Parsing CBOR into the internal representation</h2>
+      <ul>
+        <li>A data item with major type 0 or 1 (positive or negative integer, respectively)
+          is parsed as the equivalent [=number=].
+          Note that this may lead to loss of precision for very large integers (|`n`| ≥ 2<sup>53</sup>).
+        </li>
+        <li>A data item with major type 2 (binary string) is parsed as a [=byte sequence=].</li>
+        <li>A data item with major type 3 (text string) is parsed as a [=string=].</li>
+        <li>A data item with major type 4 (array) is parsed as an [=array=]
+          whose items are parsed by recursively applying these rules.</li>
+        <li>A data item with major type 5 (map) is parsed as a [=map=]
+          whose keys and values are parsed by recursively applying these rules.</li>
+        <li>A data item with major type 7 (primitive) is parsed as:<ul>
+          <li>the [=boolean=] value `false` if the additional type value is 20
+          <li>the [=boolean=] value `true` if the additional type value is 21
+          <li>the [=null=] value if the additional type value is 22
+          <li>a [=number=] if the additional type value is 24, 25, or 26 (floating point numbers),
+            and the value is neither `NaN` nor infinite
+        </ul></li>
+        <li>Any other data item is not representable in the internal representation, and should raise an error.</li>
+      </ul>
+      <p class="note">
+        It should be noted that CBOR tags (major type 6) are not parsed into the internal representation.
+         CBOR-LD does not use CBOR tags, except at the top level,
+         and this tag is managed in an ad-hoc fashion in Section&nbsp;<a href="#get-registry-entry-id-algorithm"></a>.
+      </p>
+    </section>
+
+    <section>
+      <h2>Serializing the internal representation in CBOR</h2>
+      <ul>
+        <li id="serialize-null-bool">
+          [=Null=] and [=boolean=] values are serialized with major type 7,
+          and additional type value 22 for `null`, 20 for `false`, and 21 for `true`.
+        </li>
+        <li id="serialize-int">
+          [=Numbers=] that are <a data-cite="ECMASCRIPT#sec-number.issafeinteger">safe integers</a>
+          &mdash; that is, that have no fractional part and have a value between -(2<sup>53</sup>-1) and
+          2<sup>53</sup>-1 inclusive &mdash;
+          are serialized as CBOR integers (major types 0 and 1 depending on their sign),
+          choosing the shortest form.
+        </li>
+        <li id="serialize-float">
+          [=Numbers=] that are not <a data-cite="ECMASCRIPT#sec-number.issafeinteger">safe integers</a> (see above)
+          are serialized as CBOR floating-point values (major type 7, and additional type value from 25 to 27). 
+          Preferably,
+          the shortest exact floating-point representation is used;
+          for instance, 1.5 is represented in a 16-bit floating-point value
+          (although some implementations may not be capable of efficiently finding the minimum form).
+        </li>
+        <li id="serialize-string">
+          [=Strings=] are serialized as CBOR UTF-8 text strings (major type 3).
+          Note that, unlike JSON,
+          CBOR does not require any escaping in strings.
+        </li>
+        <li id="serialize-byte-sequence">
+          [=Byte sequences=] are serialized as CBOR binary strings (major type 2).
+        </li>
+        <li id="serialize-array">
+          [=Arrays=] are serialized as CBOR arrays (major type 4),
+          and their items are serialized by applying these rules recursively.
+        </li>
+        <li id="serialize-map">
+          [=Maps=] are serialized as CBOR maps (major type 5),
+          and their keys and values are serialized by applying these rules recursively.
+        </li>
+      </ul>
+    </section>
+  </section>
   <section class="normative">
     <h1>Algorithms</h1>
+<p>
 In this section, we specify the algorithms required to convert JSON-LD to CBOR-LD
-and vice versa. The majority of the algorithms in this section relate to the semantic
-compression feature and are not used in conversions between CBOR-LD and JSON-LD where
-the CBOR-LD payload does not use semantic compression.
+and vice versa. The conversion algorithms are used whenever a CBOR-LD payload uses at least
+one compression strategy: semantic compression, a codec, or a registry dictionary. A payload
+that uses none of them is simply the
+<a href="#serializing-the-internal-representation-in-cbor">CBOR serialization</a> of the JSON-LD
+document. When semantic
+compression is disabled, the conversion algorithms still process the contexts used by the
+document, because codecs and registry dictionaries are selected using the term definitions
+those contexts provide, but keys are carried as text strings rather than term identifiers.
+</p>
       <h2>Encoding and Decoding</h2>
       <section>
         <h3>JSON-LD to CBOR-LD Encoding Algorithm</h3>
         <p>
 This algorithm takes a map `typeTable`, an integer `registryEntryId`, and a JSON-LD
-document `jsonldDocument` as inputs, and returns a hexadecimal string `cborldBytes`.
+document `jsonldDocument` as inputs, and returns a byte sequence `cborldBytes`.
         </p>
         <ol>
           <li>
@@ -839,16 +1322,19 @@ Set `prefix` to the result of passing `registryEntryId` to
 Set `state` to an empty map.
           </li>
           <li>
-If the registry entry associated with `registryEntryId` requires semantic compression:
+Set `state.typeTable` to `typeTable` and `state.registryEntryId` to `registryEntryId`.
+          </li>
+          <li>
+Set `state` to the result of passing `state` and the <a>CBOR-LD Registry Entry</a>
+associated with `registryEntryId` as `registryEntry` to
+<a href="#initialize-processing-model-algorithm"></a>.
+          </li>
+          <li>
+If `state.semanticCompression` is `true`, `state.processingModeTypeEncoders` is not empty,
+or `state.typeTable` contains at least one registry dictionary that is not empty:
           <ol>
             <li>
 Set `state.strategy` to "compression".
-            </li>
-            <li>
-Set `state.typeTable` to `typeTable`.
-            </li>
-            <li>
-Set `state.registryEntryId` to `registryEntryId`.
             </li>
             <li>
 Set `state` to the result of passing `state` to
@@ -859,15 +1345,17 @@ Set `output` to the result of passing `state` and `jsonldDocument`
 as `inputDocuments` to <a href="#convert-document-algorithm"></a>.
             </li>
             <li>
-Set `suffix` to the CBOR encoding of `output`.
+Set `suffix` to the <a href="#serializing-the-internal-representation-in-cbor">CBOR serialization</a>
+of `output`.
             </li>
           </ol>
           </li>
           <li>
-Otherwise, set `suffix` to the CBOR encoding of `jsonldDocument`.
+Otherwise, set `suffix` to the <a href="#serializing-the-internal-representation-in-cbor">CBOR serialization</a>
+of `jsonldDocument`.
           </li>
           <li>
-Set `cborldBytes` to a hexidecimal encoding of `prefix` prepended to `suffix`.
+Set `cborldBytes` to the concatenation of `prefix` and `suffix`.
           </li>
           <li>
 Return `cborldBytes`.
@@ -877,7 +1365,8 @@ Return `cborldBytes`.
       <section>
         <h3>CBOR-LD to JSON-LD Decoding Algorithm</h3>
         <p>
-This algorithm takes a CBOR-LD payload `cborldBytes`, and returns a JSON-LD document `jsonldDocument`.
+This algorithm takes a CBOR-LD payload `cborldBytes` as a byte sequence,
+and returns a JSON-LD document `jsonldDocument`.
         </p>
         <ol>
           <li>
@@ -891,22 +1380,33 @@ Set `result` to the result of passing `cborldBytes` to
 Set `state`.`registryEntryId` to `result`.`registryEntryId` and `suffix` to `result`.`suffix`.
           </li>
           <li>
-If the registry entry associated with `state`.`registryEntryId` uses semantic compression:
+Set `registryEntry` to the <a>CBOR-LD Registry Entry</a> associated with
+`state`.`registryEntryId`.
+          </li>
+          <li>
+Set `state`.`typeTable` and `state`.`reverseTypeTable` to empty maps. For each entry
+<em>`type`: `map`</em> in the `typeTables` array in `registryEntry`, add that entry to
+`state`.`typeTable`, and set the value of `type` in `state`.`reverseTypeTable` to `inverseMap`,
+where `inverseMap` is `map` with the mapping inverted.
+          </li>
+          <li>
+Set `state` to the result of passing `state` and `registryEntry` to
+<a href="#initialize-processing-model-algorithm"></a>.
+          </li>
+          <li>
+If `state.semanticCompression` is `true`, `state.processingModeTypeDecoders` is not empty,
+or `state.typeTable` contains at least one registry dictionary that is not empty:
           <ol>
             <li>
 Set `state.strategy` to "decompression".
-            </li>
-            <li>
-For each entry <em>`type`: `map`</em> in the `typeTables` array in the CBOR-LD Registry Entry
-associated with `registryEntryId`, add that entry to `state`.`typeTable`, and set the value of `type`
-in `state`.`reverseTypeTable` to `inverseMap`, where `inverseMap` is `map` with the mapping inverted.
             </li>
             <li>
 Set `state` to the result of passing `state` to
 <a href="#initialize-conversion-algorithm"></a>.
             </li>
             <li>
-Set `input` to the result of decoding `suffix`. If the result is not a map or an array, throw an error 
+Set `input` to the result of <a href="#parsing-cbor-into-the-internal-representation">parsing</a>
+`suffix` from CBOR bytes. If the result is not a map or an array, throw an error
 `ERR_INVALID_PAYLOAD_STRUCTURE`.
             </li>
             <li>
@@ -916,10 +1416,52 @@ to <a href="#convert-document-algorithm"></a>.
           </ol>
           </li>
           <li>
-Otherwise, set `jsonldDocument` to the result of decoding `suffix` from bytes to a map.
+Otherwise, set `jsonldDocument` to the result of <a href="#parsing-cbor-into-the-internal-representation">parsing</a>
+`suffix` from CBOR bytes to a map.
           </li>
           <li>
 Return `jsonldDocument`.
+          </li>
+        </ol>
+      </section>
+      <section>
+        <h3>Initialize Processing Model Algorithm</h3>
+        <p>
+This algorithm takes a map `state` and a <a>CBOR-LD Registry Entry</a> `registryEntry`, and
+returns `state`. It records in `state` the <a>processing model</a> used by `registryEntry`
+(see <a href="#expressing-a-processing-model"></a>).
+        </p>
+        <ol>
+          <li>
+If `registryEntry` has a `processingModel` member, set `processingModel` to its value.
+Otherwise, set `processingModel` to the <a>default processing model</a>: a map whose
+`semanticCompression` member is `true` and whose `codecs` member maps each type in the third
+column of the table in <a href="#codec-identifiers"></a> to the codec identifier in the first
+column of the same row.
+          </li>
+          <li>
+If `processingModel` has a `semanticCompression` member, set `state.semanticCompression` to
+its value. Otherwise, set `state.semanticCompression` to `true`.
+          </li>
+          <li>
+Set `state.processingModeTypeEncoders` and `state.processingModeTypeDecoders` to empty maps.
+          </li>
+          <li>
+If `processingModel` has a `codecs` member, then for each entry <em>`type`:
+`codecIdentifier`</em> in it:
+            <ol>
+              <li>
+If the implementation does not implement the codec identified by `codecIdentifier`, throw an
+`ERR_UNSUPPORTED_CODEC` error.
+              </li>
+              <li>
+Set the value of `type` in both `state.processingModeTypeEncoders` and
+`state.processingModeTypeDecoders` to the codec identified by `codecIdentifier`.
+              </li>
+            </ol>
+          </li>
+          <li>
+Return `state`.
           </li>
         </ol>
       </section>
@@ -1079,8 +1621,8 @@ For `unconvertedValue` in `values`:
                 <ol>
                   <li>
 Set `result` to the result of <a href="#convert-value-algorithm"></a>,
-passing `state`, `termType`, `unconvertedValue` as `value`, and `valueActiveContext`
-as `activeContext`.
+passing `state`, `termInfo`, `termType`, `unconvertedValue` as `value`, and
+`valueActiveContext` as `activeContext`.
                   </li>
                   <li>
 Set `state` to `result.state` and add `result.output` to `outputs`.
@@ -1216,20 +1758,25 @@ Otherwise, set `isArray` to `false` and `contexts` to `[context]`.
 For `contextValue` in `contexts`:
               <ol>
                 <li>
-Set `encoderData` to the result of <a href="#create-context-encoder"></a>, passing
+Set `encodedData` to the result of <a href="#encode-context"></a>, passing
 `state.typeTable` and `contextValue`.
                 </li>
                 <li>
-If `encoderData` is an empty map, add `contextValue` to `encodedContexts`.
+If `encodedData` is defined, add `encodedData` to `encodedContexts`.
                 </li>
                 <li>
-Otherwise, add the value of `encoderData` to `encodedContexts`.
+Otherwise, add `contextValue` to `encodedContexts`.
                 </li>
               </ol>
             </li>
             <li>
-If `isArray` is `true`, set `id` to the value of "@context" in `state.keywordsMap` plus 1
-and set the value of `id` in `output` to `encodedContexts`.
+If `state.semanticCompression` is `false`, set `id` to "@context". If `isArray` is `true`,
+set the value of `id` in `output` to `encodedContexts`; otherwise, set it to the first element
+of `encodedContexts`.
+            </li>
+            <li>
+Otherwise, if `isArray` is `true`, set `id` to the value of "@context" in `state.keywordsMap`
+plus 1 and set the value of `id` in `output` to `encodedContexts`.
             </li>
             <li>
 Otherwise, set `id` to the value of "@context" in `state.keywordsMap` and set the value of
@@ -1255,7 +1802,7 @@ and returns a map `encoderData`.
 If `valueToEncode` is an object, return.
             </li>
             <li>
-Otherwise, set `result` to the result of <a href="#create-value-encoder"></a>, passing
+Otherwise, set `result` to the result of <a href="#encode-value"></a>, passing
 `state`, `termInfo`, `valueToToEncode`, and `termType`.
             </li>
             <li>
@@ -1288,7 +1835,8 @@ Set `value` to the value of `key` in `input`.
 If `value` is an array, set `plural` to `true`. Otherwise, set `plural` to `false`.
                 </li>
                 <li>
-If `key` does not have an entry in `state`.`termToId`, set `termId` to `key`.
+If `state`.`semanticCompression` is `false`, or `key` does not have an entry in
+`state`.`termToId`, set `termId` to `key`.
                 </li>
                 <li>
 Otherwise, if `plural` is `true`, set `termId` to the value of `key` in `state`.`termToId` plus 1.
@@ -1370,36 +1918,58 @@ This algorithm takes maps `state`, `activeContext`, `input`, and `output`, and r
 Set `decoderData` to the result of <a href="#create-context-decoder"></a>, passing `state`.`reverseTypeTable`.
             </li>
             <li>
-Set `contextTermId` to the value of "@context" in `state`.`keywordsMap`.
+If `state`.`semanticCompression` is `false` and "@context" has an entry in `input`:
+              <ol>
+                <li>
+Set `encodedContext` to the value of "@context" in `input`.
+                </li>
+                <li>
+If `encodedContext` is an array, set the value of "@context" in `output` to an array containing,
+for each `valueToDecode` in `encodedContext` in order, the result of passing `decoderData` and
+`valueToDecode` as `value` to <a href="#decode-context"></a>.
+                </li>
+                <li>
+Otherwise, set the value of "@context" in `output` to the result of passing `decoderData` and
+`encodedContext` as `value` to <a href="#decode-context"></a>.
+                </li>
+              </ol>
             </li>
             <li>
+If `state`.`semanticCompression` is `true`:
+              <ol>
+                <li>
+Set `contextTermId` to the value of "@context" in `state`.`keywordsMap`.
+                </li>
+                <li>
 If `contextTermId` has an entry in `input`, set the value of
 "@context" in `output` to the result of <a href="#decode-context"></a>, passing `decoderData` and
 the value of `contextTermId` in `input` as `value`.
-            </li>
-            <li>
-Set `contextTermIdPlural` to the value of `contextTermId` plus 1.
-            </li>
-            <li>
-If `contextTermIdPlural` has an entry in `input`:
-              <ol>
+                </li>
                 <li>
+Set `contextTermIdPlural` to the value of `contextTermId` plus 1.
+                </li>
+                <li>
+If `contextTermIdPlural` has an entry in `input`:
+                  <ol>
+                    <li>
 If `contextTermId` also had an entry in `input` during the previous check, throw an
 `ERR_INVALID_ENCODED_CONTEXT` error.
-                </li>
-                <li>
+                    </li>
+                    <li>
 Set `encodedContexts` to be the value of `contextTermIdPlural` in `input`. If `encodedContexts` is
 not an array, throw an `ERR_INVALID_ENCODED_CONTEXT` error.
-                </li>
-                <li>
+                    </li>
+                    <li>
 Set `contexts` to be an empty array.
-                </li>
-                <li>
+                    </li>
+                    <li>
 For each `valueToDecode` in `encodedContexts`, add the result of passing `decoderData` and `valueToDecode`
 as `value` to <a href="#decode-context"></a> to `contexts`.
-                </li>
-                <li>
+                    </li>
+                    <li>
 Set the value of "@context" in `output` to `contexts`.
+                    </li>
+                  </ol>
                 </li>
               </ol>
             </li>
@@ -1448,7 +2018,23 @@ Initialize `entries` to an empty array.
 For key-value pair `key` and `value` in `input`:
               <ol>
                 <li>
-If `key` is the value of "@context" in `state`.`keywordsMap` or that value plus 1, continue.
+If `state`.`semanticCompression` is `false`:
+                  <ol>
+                    <li>
+If `key` is "@context", continue.
+                    </li>
+                    <li>
+If `key` is not a string, throw an error `ERR_UNKNOWN_CBORLD_TERM_ID`.
+                    </li>
+                    <li>
+Set `term` to `key`. If `value` is an array, set `plural` to `true`. Otherwise, set
+`plural` to `false`.
+                    </li>
+                  </ol>
+                </li>
+                <li>
+Otherwise, if `key` is the value of "@context" in `state`.`keywordsMap` or that value plus 1,
+continue.
                 </li>
                 <li>
 Otherwise, if `key` is a string, set `plural` to false and `term` to `key`.
@@ -1509,7 +2095,8 @@ Set `objectTypes` to be an empty set.
 For `term` in `activeContext`.`typeTerms`:
               <ol>
                 <li>
-If `term` does not have an entry in `state`.`termToId`, set `termId` to `term`.
+If `state`.`semanticCompression` is `false`, or `term` does not have an entry in
+`state`.`termToId`, set `termId` to `term`.
                 </li>
                 <li>
 Otherwise, set `termId` to the value of `term` in `state`.`termToId`.
@@ -1858,7 +2445,7 @@ Set `currentContext` to `activeContext.previousActiveContext`.
 Set `def` to the value of `term` in `currentContext.termMap`.
                 </li>
                 <li>
-While `def` is not undefined and `def.propagate` is set to `false`:
+While `def` is defined and `def.propagate` is set to `false`:
                   <ol>
                     <li>
 Set `currentContext` to `activeContext.previousActiveContext`.
@@ -1869,7 +2456,7 @@ Set `def` to the value of `term` in `currentContext.termMap`.
                   </ol>
                 </li>
                 <li>
-If `def` is not undefined, set the value of `term` in `newTermMap` to `def`.
+If `def` is defined, set the value of `term` in `newTermMap` to `def`.
                 </li>
               </ol>
             </li>
@@ -2126,15 +2713,12 @@ encode both primitive and non-primitive types as CBOR.
       <section>
         <h3>Context Codec</h3>
         <section>
-          <h4>Create Context Encoder</h4>
+          <h4>Encode Context</h4>
           <p>
 This algorithm takes a map `typeTable` and a value `contextValue` and
-returns a map `encoderData`.
+returns an optional integer.
           </p>
           <ol>
-            <li>
-Initialize `encoderData` to an empty map.
-            </li>
             <li>
 If `contextValue` is not a string, return.
             </li>
@@ -2142,27 +2726,10 @@ If `contextValue` is not a string, return.
 Otherwise, set `contextTable` to the value of "context" in `typeTable`.
             </li>
             <li>
-Set `encoderData.context` to `contextValue` and `encoderData.contextTable` to
-`contextTable`.
+If `contextValue` has an entry in `contextTable`, return the value of `contextValue` in `contextTable`.
             </li>
             <li>
-Return `encoderData`.
-            </li>
-          </ol>
-        </section>
-        <section>
-          <h4>Encode Context</h4>
-          <p>
-This algorithm takes a map `encoderData`, and returns CBOR binary data.
-          </p>
-          <ol>
-            <li>
-If `encoderData`.`context` has an entry in `encoderData`.`contextTable`, return a CBOR encoding
-of the value of `encoderData`.`context` in `encoderData` as a Major Type 0 (unsigned integer) object.
-            </li>
-            <li>
-Otherwise, return a CBOR encoding of the value of `encoderData`.`context` as a Major Type 3
-(text string) object.
+Otherwise, return.
             </li>
           </ol>
         </section>
@@ -2207,10 +2774,10 @@ Otherwise, throw an error `ERR_UNDEFINED_COMPRESSED_CONTEXT`.
       <section>
         <h3>Value Codec</h3>
         <section>
-          <h4>Create Value Encoder</h4>
+          <h4>Encode Value</h4>
           <p>
 This algorithm takes maps `state` and `termInfo`, and values
-`termType` and `valueToEncode`, and returns a map `encoderData` or `valueToEncode`.
+`termType` and `valueToEncode`, and returns a value.
           </p>
           <ol>
             <li>
@@ -2266,55 +2833,39 @@ Set `convertToBytes` and `includeSign` to `true`.
                 </li>
                 <li>
 If `intValue` is defined:
-                  <ol>
-                    <li>
-Initialize `encoderData` to an empty map.
-                    </li>
-                    <li>
-Set `encoderData`.`intValue` to the value of `intValue`, `encoderData`.`convertToBytes` to
-the value of `convertToBytes`, and `encoderData`.`includeSign` to the value of `includeSign`.
-                    </li>
-                    <li>
-Return `encoderData`.
-                    </li>
-                  </ol>
+                <ol>
+                  <li>
+If `convertToBytes` is `true`,
+return the result of converting `intValue` to a byte sequence, using the value of `includeSign` to
+determine whether the binary representation of the integer should be signed or unsigned.
+                  </li>
+                  <li>
+Otherwise, return `intValue`.
+                  </li>
+                </ol>
                 </li>
               </ol>
             </li>
             <li>
-If `tableType` has an entry in `state.processingModeTypeEncoders`, set `encoderData` to the result of
-calling the `Create Encoder` algorithm associated with that entry's codec.
+If `tableType` has an entry in `state.processingModeTypeEncoders`, set `encodedData` to the result of
+calling the `Encode Value` algorithm associated with that entry's codec.
             </li>
             <li>
-If `encoderData` is defined, return `encoderData`.
+If `encodedData` is defined, return `encodedData`, unless `state.semanticCompression` is
+`false`, `termInfo.plural` is `false`, and `encodedData` is an [=array=] (see the note below).
             </li>
             <li>
 Return `valueToEncode`.
             </li>
           </ol>
-        </section>
-        <section>
-          <h4>Encode Value</h4>
-          <p>
-This algorithm takes a map `encoderData`, and returns CBOR binary data.
-          </p>
-          <ol>
-            <li>
-If `encoderData`.`convertToBytes` is `true`:
-              <ol>
-                <li>
-Set `bytes` to the result of converting `intValue` to bytes, using the value of `includeSign` to
-determine whether the binary representation of the integer should be signed or unsigned.
-                </li>
-                <li>
-Return a CBOR encoding of `bytes` as a Major Type 2 (byte string) object.
-                </li>
-              </ol>
-            </li>
-            <li>
-Otherwise, return a CBOR encoding of `intValue` as a Major Type 0 (unsigned integer) object.
-            </li>
-          </ol>
+          <aside class="note">
+When semantic compression is in use, an odd key indicates that a value is an array of values,
+so a decoder can tell an array of values from a single value whose compressed form is itself
+an array, such as a value compressed by the <a href="#url-codec">URL Codec</a>. When semantic
+compression is disabled, keys are text strings and carry no such indication, so a decoder
+treats every array as an array of values. A codec is therefore not applied to a single value
+if its compressed form would be an array; the value is carried through unchanged.
+          </aside>
         </section>
         <section>
           <h4>Create Value Decoder</h4>
@@ -2430,8 +2981,9 @@ Return `decoderData`.`decoded`.
 The URL Codec compresses URL values based on the prefix of the value,
 where the prefix is the longest matching entry in the <a>URL Prefix
 Table</a>. URLs are encoded as arrays, where the first integer
-identifies the prefix of the URL. The codec first checks whether the value matches a known
-JSON-LD term identifier, encoding it as a simple integer if so. Otherwise,
+identifies the prefix of the URL. When semantic compression is in use, the codec first checks
+whether the value matches a known JSON-LD term identifier, encoding it as a simple integer if
+so. Otherwise,
 it delegates to one of the following prefix-specific sub-codecs, based
 on the prefix of the value.
         </p>
@@ -2460,11 +3012,10 @@ inversion of this table (i.e., a map from integers to URL prefix strings).
         </section>
 
         <section>
-          <h4>Create URL Encoder</h4>
+          <h4>Encode URL</h4>
           <p>
 This algorithm takes a map <code>state</code>, a map <code>termInfo</code>,
-and a string <code>valueToEncode</code>, and returns either an encoder object
-or <code>undefined</code>.
+and a string <code>valueToEncode</code>, and optionally returns an integer or an array.
           </p>
           <ol>
             <li>
@@ -2472,70 +3023,50 @@ If <code>valueToEncode</code> is not a string, throw an
 <code>ERR_UNSUPPORTED_JSON_TYPE</code> error.
             </li>
             <li>
-Set <code>termId</code> to the result of looking up
-<code>valueToEncode</code> in <code>state.termToId</code>.
+If <code>state.semanticCompression</code> is <code>true</code>, set
+<code>termId</code> to the result of looking up <code>valueToEncode</code>
+in <code>state.termToId</code>. (When semantic compression is disabled,
+there are no term identifiers, and <code>termId</code> is not defined.)
             </li>
             <li>
-If <code>termId</code> is an integer, return an encoder that, when
-invoked via <a href="#encode-url"></a>, encodes <code>termId</code> as
-a Major Type 0 (unsigned integer) CBOR item.
+If <code>termId</code> is defined and is an integer, return it.
             </li>
             <li>
 Attempt to parse <code>valueToEncode</code> as a URL.
-If parsing fails (i.e., the value is not a valid URL), return
-<code>undefined</code>.
+If parsing fails (i.e., the value is not a valid URL), return.
             </li>
             <li>
 Set <code>prefix</code> to the entry in the <a>URL Prefix Table</a>
 such that <code>valueToEncode</code> starts with <code>prefix</code> and
 the remainder of <code>valueToEncode</code> following <code>prefix</code>
 does not contain a "<code>:</code>" (U+003A COLON) character. If no such
-entry exists, return <code>undefined</code> (meaning, no compression is
+entry exists, return (meaning, no compression is
 possible for this URL).
             </li>
             <li>
 If <code>prefix</code> is "<code>https://</code>" or
 "<code>http://</code>", return the result of
-<a href="#create-http-url-encoder"></a> passing
+<a href="#encode-http-url"></a> passing
 <code>valueToEncode</code>.
             </li>
             <li>
 If <code>prefix</code> is "<code>urn:uuid:</code>", return the result of
-<a href="#create-uuid-urn-encoder"></a> passing
+<a href="#encode-uuid-urn"></a> passing
 <code>valueToEncode</code>.
             </li>
             <li>
 If <code>prefix</code> is "<code>data:</code>", return the result of
-<a href="#create-data-url-encoder"></a> passing
+<a href="#encode-data-url"></a> passing
 <code>valueToEncode</code>.
             </li>
             <li>
 If <code>prefix</code> is "<code>did:v1:nym:</code>" or
 "<code>did:key:</code>", return the result of
-<a href="#create-base58-did-url-encoder"></a> passing
+<a href="#encode-base58-did-url"></a> passing
 <code>valueToEncode</code>.
             </li>
             <li>
-Return <code>undefined</code> (meaning, no compression is possible for this URL).
-            </li>
-          </ol>
-        </section>
-
-        <section id="encode-url">
-          <h4>Encode URL</h4>
-          <p>
-This algorithm takes an encoder object produced by
-<a href="#create-url-encoder"></a>, and returns CBOR binary data.
-          </p>
-          <ol>
-            <li>
-If the encoder was created for a term-ID match (step 3 of
-<a href="#create-url-encoder"></a>), return a CBOR encoding of
-<code>termId</code> as a Major Type 0 (unsigned integer) object.
-            </li>
-            <li>
-Otherwise, invoke the <code>encode</code> method of the appropriate
-prefix-specific sub-encoder and return the resulting CBOR binary data.
+Return (meaning, no compression is possible for this URL).
             </li>
           </ol>
         </section>
@@ -2544,12 +3075,11 @@ prefix-specific sub-encoder and return the resulting CBOR binary data.
           <h4>Create URL Decoder</h4>
           <p>
 This algorithm takes a map <code>state</code>, a map <code>termInfo</code>,
-and a value <code>valueToDecode</code>, and returns a decoder object or
-<code>undefined</code>.
+and a value <code>valueToDecode</code>, and returns an optional decoder object.
           </p>
           <ol>
             <li>
-If <code>valueToDecode</code> is a string, return <code>undefined</code>
+If <code>valueToDecode</code> is a string, return
 (meaning, value is already an uncompressed URL string; pass through).
             </li>
             <li>
@@ -2591,7 +3121,7 @@ Otherwise, if <code>prefix</code> is "<code>did:v1:nym:</code>" or
 If <code>prefix</code> did not match any of the above (including when
 <code>prefixId</code> has no entry in the
 <a>URL Prefix Reverse Table</a>), or if <code>decoder</code> is
-<code>undefined</code> (meaning, the sub-decoder rejected the shape of
+not defined (meaning, the sub-decoder rejected the shape of
 <code>valueToDecode</code>), throw an
 <code>ERR_UNKNOWN_COMPRESSED_VALUE</code> error.
                 </li>
@@ -2601,13 +3131,15 @@ Return <code>decoder</code>.
               </ol>
             </li>
             <li>
-If <code>valueToDecode</code> is an integer, set <code>term</code> to the
-result of looking up <code>valueToDecode</code> in
+If <code>valueToDecode</code> is an integer: if
+<code>state.semanticCompression</code> is <code>false</code>, throw an
+<code>ERR_UNKNOWN_COMPRESSED_VALUE</code> error; otherwise, set
+<code>term</code> to the result of looking up <code>valueToDecode</code> in
 <code>state.idToTerm</code> and return a decoder whose
 <a href="#decode-url"></a> invocation returns <code>term</code>.
             </li>
             <li>
-Return <code>undefined</code>.
+Return.
             </li>
           </ol>
         </section>
@@ -2643,11 +3175,11 @@ integer from the <a>URL Prefix Table</a> and <code>remainder</code> is
 the prefix-stripped portion of the URL as a text string.
           </p>
 
-          <section id="create-http-url-encoder">
-            <h5>Create HTTP URL Encoder</h5>
+          <section id="encode-http-url"><span id="create-http-url-encoder"></span>
+            <h5>Encode HTTP URL</h5>
             <p>
 This algorithm takes a string <code>value</code>, and returns an
-encoder object or <code>undefined</code>.
+optional array.
             </p>
             <ol>
               <li>
@@ -2659,35 +3191,19 @@ Otherwise, if <code>value</code> starts with <code>"http://"</code>, set
 <code>prefix</code> to <code>"http://"</code>.
               </li>
               <li>
-Otherwise, return <code>undefined</code>.
+Otherwise, return.
               </li>
               <li>
-Return an encoder object containing <code>value</code> and
-<code>prefix</code>.
-              </li>
-            </ol>
-          </section>
-
-          <section>
-            <h5>Encode HTTP URL</h5>
-            <p>
-This algorithm takes an encoder object from
-<a href="#create-http-url-encoder"></a>, and returns CBOR binary data.
-            </p>
-            <ol>
-              <li>
-Set <code>prefixId</code> to the value of <code>encoderData.prefix</code>
+Set <code>prefixId</code> to the value of <code>prefix</code>
 in the <a>URL Prefix Table</a>.
               </li>
               <li>
-Set <code>rest</code> to the substring of <code>encoderData.value</code>
+Set <code>rest</code> to the substring of <code>value</code>
 beginning after <code>encoderData.prefix</code>.
               </li>
               <li>
-Return a CBOR encoding of a two-element array
-<code>[prefixId, rest]</code>: Major Type 4 (array) containing a
-Major Type 0 (unsigned integer) item followed by a Major Type 3
-(text string) item.
+Return a two-element array
+<code>[prefixId, rest]</code>.
               </li>
             </ol>
           </section>
@@ -2696,7 +3212,7 @@ Major Type 0 (unsigned integer) item followed by a Major Type 3
             <h5>Create HTTP URL Decoder</h5>
             <p>
 This algorithm takes a CBOR array <code>valueToDecode</code>, and
-returns a decoder object or <code>undefined</code>.
+returns an optional decoder object.
             </p>
             <ol>
               <li>
@@ -2713,7 +3229,7 @@ Return a decoder object containing <code>prefix</code>.
                 </ol>
               </li>
               <li>
-Otherwise, return <code>undefined</code>.
+Otherwise, return.
               </li>
             </ol>
           </section>
@@ -2748,34 +3264,21 @@ round-tripped through binary form).
           </p>
 
           <section>
-            <h5>Create UUID URN Encoder</h5>
+            <h5>Encode UUID URN</h5>
             <p>
-This algorithm takes a string <code>value</code>, and returns an encoder
-object or <code>undefined</code>.
+This algorithm takes a string <code>value</code>, and returns an optional array.
             </p>
             <ol>
               <li>
 If <code>value</code> does not start with <code>"urn:uuid:"</code>,
-return <code>undefined</code>.
+return.
               </li>
-              <li>
-Return an encoder object containing <code>value</code>.
-              </li>
-            </ol>
-          </section>
-
-          <section>
-            <h5>Encode UUID URN</h5>
-            <p>
-This algorithm takes an encoder object, and returns CBOR binary data.
-            </p>
-            <ol>
               <li>
 Set <code>prefixId</code> to <code>3</code> (the entry for
 <code>"urn:uuid:"</code> in the <a>URL Prefix Table</a>).
               </li>
               <li>
-Set <code>rest</code> to the substring of <code>encoderData.value</code>
+Set <code>rest</code> to the substring of <code>value</code>
 beginning after <code>"urn:uuid:"</code>.
               </li>
               <li>
@@ -2809,7 +3312,7 @@ Major Type 0 (unsigned integer) item followed by a Major Type 3
             <h5>Create UUID URN Decoder</h5>
             <p>
 This algorithm takes a CBOR array <code>valueToDecode</code>, and returns
-a decoder object or <code>undefined</code>.
+an optional decoder object.
             </p>
             <ol>
               <li>
@@ -2817,7 +3320,7 @@ If <code>valueToDecode</code> has exactly two elements, and the second
 element is either a byte string or a text string, return a decoder object.
               </li>
               <li>
-Otherwise, return <code>undefined</code>.
+Otherwise, return.
               </li>
             </ol>
           </section>
@@ -2859,16 +3362,17 @@ as a two-element CBOR array <code>[4, rest]</code> where
 <code>rest</code> is the portion of the URL after <code>"data:"</code>.
           </p>
 
-          <section id="create-data-url-encoder">
-            <h5>Create Data URL Encoder</h5>
+          <section id="encode-data-url"><span id="create-data-url-encoder"></span>
+            <h5>Encode Data URL</h5>
             <p>
-This algorithm takes a string <code>value</code>, and returns an encoder
-object or <code>undefined</code>.
+This algorithm takes a string <code>value</code>, and returns an optional array.
             </p>
             <ol>
               <li>
-If <code>value</code> does not start with <code>"data:"</code>, return
-<code>undefined</code>.
+If <code>value</code> does not start with <code>"data:"</code>, return.
+              </li>
+              <li>
+Set `base64` to `false`.
               </li>
               <li>
 Attempt to match <code>value</code> against the regular expression
@@ -2881,49 +3385,29 @@ where each <code>.*</code> is greedy (i.e., if the string
 If the match succeeds:
                 <ol>
                   <li>
-Set <code>data</code> to the value of the <code>data</code> capture
+Set <code>mediatype</code> and <code>data</code> to the value of the corresponding capture
 group.
                   </li>
                   <li>
-Verify round-trip integrity: decode <code>data</code> from base64 and
-re-encode to base64. If the result equals <code>data</code>, return an
-encoder object with <code>value</code> and <code>base64</code> set to
+Set <code>dataBytes</code> to the decoding of <code>data</code> from base64 into a byte sequence, or leave it undefined if the decoding fails.
+                  </li>
+                  <li>
+Verify round-trip integrity: if <code>dataBytes</code> is defined,
+and its encoding to base64 equals <code>data</code> fr, set <code>base64</code> to
 <code>true</code>.
                   </li>
                 </ol>
               </li>
               <li>
-Return an encoder object with <code>value</code> and <code>base64</code>
-set to <code>false</code>.
-              </li>
-            </ol>
-          </section>
-
-          <section>
-            <h5>Encode Data URL</h5>
-            <p>
-This algorithm takes an encoder object from
-<a href="#create-data-url-encoder"></a>, and returns CBOR binary data.
-            </p>
-            <ol>
-              <li>
 Set <code>prefixId</code> to <code>4</code> (the entry for
 <code>"data:"</code> in the <a>URL Prefix Table</a>).
               </li>
               <li>
-If <code>encoderData.base64</code> is <code>true</code>:
+If <code>base64</code> is <code>true</code>:
                 <ol>
                   <li>
-Parse <code>encoderData.value</code> to extract <code>mediatype</code>
-(the substring between <code>"data:"</code> and <code>";base64,"</code>)
-and <code>dataBytes</code> (the binary decoding of the base64 data
-portion).
-                  </li>
-                  <li>
-Return a CBOR encoding of a three-element array
-<code>[prefixId, mediatype, dataBytes]</code>: Major Type 4 (array)
-containing a Major Type 0 integer, a Major Type 3 text string, and a
-Major Type 2 byte string.
+Return a three-element array
+<code>[prefixId, mediatype, dataBytes]</code>.
                   </li>
                 </ol>
               </li>
@@ -2931,13 +3415,12 @@ Major Type 2 byte string.
 Otherwise:
                 <ol>
                   <li>
-Set <code>rest</code> to the substring of <code>encoderData.value</code>
+Set <code>rest</code> to the substring of <code>value</code>
 beginning after <code>"data:"</code>.
                   </li>
                   <li>
-Return a CBOR encoding of a two-element array
-<code>[prefixId, rest]</code>: Major Type 4 (array) containing a
-Major Type 0 integer and a Major Type 3 text string.
+Return a two-element array
+<code>[prefixId, rest]</code>.
                   </li>
                 </ol>
               </li>
@@ -2948,7 +3431,7 @@ Major Type 0 integer and a Major Type 3 text string.
             <h5>Create Data URL Decoder</h5>
             <p>
 This algorithm takes a CBOR array <code>valueToDecode</code>, and returns
-a decoder object or <code>undefined</code>.
+an optional decoder object.
             </p>
             <ol>
               <li>
@@ -2962,7 +3445,7 @@ the second element is a text string, return a decoder object
 (non-base64 mode).
               </li>
               <li>
-Otherwise, return <code>undefined</code>.
+Otherwise, return.
               </li>
             </ol>
           </section>
@@ -3020,42 +3503,23 @@ The <a>URL Prefix Table</a> entries used by this codec are
 <code>did:key:</code> → <code>1025</code>.
           </aside>
 
-          <section id="create-base58-did-url-encoder">
-            <h5>Create Base58 DID URL Encoder</h5>
-            <p>
-This algorithm takes a string <code>value</code>, and returns an
-encoder object or <code>undefined</code>.
-            </p>
-            <ol>
-              <li>
-For each <code>[prefix, prefixId]</code> pair in the
-<a>URL Prefix Table</a> where the prefix starts with
-<code>"did:"</code>:
-                <ol>
-                  <li>
-If <code>value</code> starts with <code>prefix</code>, return an encoder
-object containing <code>value</code>, <code>prefix</code>, and
-<code>prefixId</code>.
-                  </li>
-                </ol>
-              </li>
-              <li>
-Return <code>undefined</code>.
-              </li>
-            </ol>
-          </section>
-
-          <section>
+          <section id="encode-base58-did-url"><span id="create-base58-did-url-encoder"></span>
             <h5>Encode Base58 DID URL</h5>
             <p>
-This algorithm takes an encoder object from
-<a href="#create-base58-did-url-encoder"></a>, and returns CBOR binary
-data.
+This algorithm takes a string <code>value</code>, and returns an optional
+array.
             </p>
             <ol>
               <li>
-Set <code>suffix</code> to the substring of <code>encoderData.value</code>
-beginning after <code>encoderData.prefix</code>.
+Look for a <code>[prefix, prefixId]</code> pair in the
+<a>URL Prefix Table</a> where the prefix starts with
+<code>"did:"</code> and <code>value</code> starts with <code>prefix</code>.
+              <li>
+Otherwise, return.
+              </li>
+              <li>
+Set <code>suffix</code> to the substring of <code>value</code>
+beginning after <code>prefix</code>.
               </li>
               <li>
 Split <code>suffix</code> on the first occurrence of <code>'#'</code>
@@ -3068,8 +3532,8 @@ Set <code>authorityEncoded</code> to the result of applying the
 <code>authority</code>.
               </li>
               <li>
-Initialize <code>entries</code> to
-<code>[encoderData.prefixId, authorityEncoded]</code>.
+Initialize <code>entries</code> to the array
+<code>[prefixId, authorityEncoded]</code>.
               </li>
               <li>
 If <code>fragment</code> is defined:
@@ -3085,8 +3549,7 @@ Append <code>fragmentEncoded</code> to <code>entries</code>.
                 </ol>
               </li>
               <li>
-Return a CBOR encoding of <code>entries</code> as a Major Type 4
-(array).
+Return <code>entries</code>.
               </li>
             </ol>
           </section>
@@ -3095,9 +3558,7 @@ Return a CBOR encoding of <code>entries</code> as a Major Type 4
             <h5>Multibase Base58 to CBOR Token</h5>
             <p>
 The <dfn>Multibase Base58 to CBOR Token</dfn> algorithm takes a string
-<code>str</code> and returns either a Major Type 2 (byte string) CBOR
-token (if the value is a base58btc multibase string) or a Major Type 3
-(text string) CBOR token.
+<code>str</code> and returns either a byte sequence or a string.
             </p>
             <ol>
               <li>
@@ -3105,16 +3566,16 @@ If <code>str</code> starts with <code>'z'</code>:
                 <ol>
                   <li>
 Set <code>decoded</code> to the result of decoding the base58btc content
-of <code>str</code> (i.e. <code>str[1:]</code>).
+of <code>str</code> (i.e. <code>str[1:]</code>) into a byte sequence.
                   </li>
                   <li>
-If decoding succeeds, return a Major Type 2 (byte string) CBOR token
-for <code>decoded</code>.
+If decoding succeeds, return
+<code>decoded</code>.
                   </li>
                 </ol>
               </li>
               <li>
-Return a Major Type 3 (text string) CBOR token for <code>str</code>.
+Return <code>str</code>.
               </li>
             </ol>
           </section>
@@ -3123,7 +3584,7 @@ Return a Major Type 3 (text string) CBOR token for <code>str</code>.
             <h5>Create Base58 DID URL Decoder</h5>
             <p>
 This algorithm takes a CBOR array <code>valueToDecode</code>, and returns
-a decoder object or <code>undefined</code>.
+a decoder object.
             </p>
             <ol>
               <li>
@@ -3139,7 +3600,7 @@ Return a decoder object containing <code>prefix</code>.
                 </ol>
               </li>
               <li>
-Otherwise, return <code>undefined</code>.
+Otherwise, return.
               </li>
             </ol>
           </section>
@@ -3206,15 +3667,14 @@ by this codec.
         </aside>
 
         <section>
-          <h4>Create XSD Date Encoder</h4>
+          <h4>Encode XSD Date</h4>
           <p>
-This algorithm takes a string <code>value</code>, and returns an encoder
-object or <code>undefined</code>.
+This algorithm takes a string <code>value</code>, and optionally returns a string or a number.
           </p>
           <ol>
             <li>
 If <code>value</code> contains the character <code>'T'</code> (indicating
-a time component), return <code>undefined</code> (this value is
+a time component), return (this value is
 compressed instead by the <a href="#xsd-datetime-codec">XSD DateTime
 Codec</a>).
             </li>
@@ -3224,26 +3684,11 @@ an ISO 8601 date string, expressed as the number of milliseconds since
 the Unix epoch.
             </li>
             <li>
-If <code>parsed</code> is not a valid number, return
-<code>undefined</code>.
+If <code>parsed</code> is not a valid number, return.
             </li>
-            <li>
-Return an encoder object containing <code>value</code> and
-<code>parsed</code>.
-            </li>
-          </ol>
-        </section>
-
-        <section>
-          <h4>Encode XSD Date</h4>
-          <p>
-This algorithm takes an encoder object from
-<a href="#create-xsd-date-encoder"></a>, and returns CBOR binary data.
-          </p>
-          <ol>
             <li>
 Set <code>secondsSinceEpoch</code> to
-<code>floor(encoderData.parsed / 1000)</code>.
+<code>floor(parsed / 1000)</code>.
             </li>
             <li>
 Set <code>reconstituted</code> to the ISO 8601 string for the instant
@@ -3256,20 +3701,11 @@ Set <code>expectedDate</code> to the substring of
 <code>'T'</code>.
             </li>
             <li>
-If <code>encoderData.value</code> is not equal to
-<code>expectedDate</code>, the compression would be lossy. Return a CBOR
-encoding of <code>encoderData.value</code> as a Major Type 3 (text
-string) object.
+If <code>value</code> is not equal to
+<code>expectedDate</code>, the compression would be lossy. Return <code>value</code>.
             </li>
             <li>
-If <code>secondsSinceEpoch</code> is greater than or equal to
-<code>0</code>, return a CBOR encoding of
-<code>secondsSinceEpoch</code> as a Major Type 0 (unsigned integer)
-object.
-            </li>
-            <li>
-Otherwise, return a CBOR encoding of <code>secondsSinceEpoch</code>
-as a Major Type 1 (negative integer) object.
+Otherwise, return <code>secondsSinceEpoch</code>.
             </li>
           </ol>
         </section>
@@ -3277,8 +3713,8 @@ as a Major Type 1 (negative integer) object.
         <section>
           <h4>Create XSD Date Decoder</h4>
           <p>
-This algorithm takes a value <code>valueToDecode</code>, and returns a
-decoder object or <code>undefined</code>.
+This algorithm takes a value <code>valueToDecode</code>, and optionally returns a
+decoder object.
           </p>
           <ol>
             <li>
@@ -3286,7 +3722,7 @@ If <code>valueToDecode</code> is an integer (positive, negative, or
 zero), return a decoder object.
             </li>
             <li>
-Otherwise, return <code>undefined</code>.
+Otherwise, return.
             </li>
           </ol>
         </section>
@@ -3323,15 +3759,14 @@ Date Codec, the value is only compressed if the compression is lossless
         </p>
 
         <section>
-          <h4>Create XSD DateTime Encoder</h4>
+          <h4>Encode XSD DateTime</h4>
           <p>
-This algorithm takes a string <code>value</code>, and returns an encoder
-object or <code>undefined</code>.
+This algorithm takes a string <code>value</code>, and optionally returns a number or an array.
           </p>
           <ol>
             <li>
 If <code>value</code> does not contain the character <code>'T'</code>,
-return <code>undefined</code> (this value is compressed instead by the
+return (this value is compressed instead by the
 <a href="#xsd-date-codec">XSD Date Codec</a>).
             </li>
             <li>
@@ -3340,30 +3775,14 @@ ISO 8601 datetime string, expressed as the number of milliseconds since
 the Unix epoch.
             </li>
             <li>
-If <code>parsed</code> is not a valid number, return
-<code>undefined</code>.
+If <code>parsed</code> is not a valid number, return.
             </li>
-            <li>
-Return an encoder object containing <code>value</code> and
-<code>parsed</code>.
-            </li>
-          </ol>
-        </section>
-
-        <section>
-          <h4>Encode XSD DateTime</h4>
-          <p>
-This algorithm takes an encoder object from
-<a href="#create-xsd-datetime-encoder"></a>, and returns CBOR binary
-data.
-          </p>
-          <ol>
             <li>
 Set <code>secondsSinceEpoch</code> to
-<code>floor(encoderData.parsed / 1000)</code>.
+<code>floor(parsed / 1000)</code>.
             </li>
             <li>
-If <code>encoderData.value</code> does not contain the character
+If <code>value</code> does not contain the character
 <code>'.'</code> (no millisecond component):
               <ol>
                 <li>
@@ -3373,20 +3792,12 @@ epoch, with the substring <code>".000Z"</code> replaced by
 <code>"Z"</code>.
                 </li>
                 <li>
-If <code>encoderData.value</code> is not equal to
-<code>expectedDate</code>, the compression would be lossy. Return a
-CBOR encoding of <code>encoderData.value</code> as a Major Type 3
-(text string) object.
+If <code>value</code> is not equal to
+<code>expectedDate</code>, the compression would be lossy. Return
+<code>value</code>.
                 </li>
                 <li>
-If <code>secondsSinceEpoch</code> is greater than or equal to
-<code>0</code>, return a CBOR encoding of
-<code>secondsSinceEpoch</code> as a Major Type 0 (unsigned integer)
-object.
-                </li>
-                <li>
-Otherwise, return a CBOR encoding of <code>secondsSinceEpoch</code> as
-a Major Type 1 (negative integer) object.
+Otherwise, return <code>secondsSinceEpoch</code>.
                 </li>
               </ol>
             </li>
@@ -3395,11 +3806,11 @@ Otherwise (millisecond component is present):
               <ol>
                 <li>
 Set <code>millisecondIndex</code> to the index of the first
-<code>'.'</code> in <code>encoderData.value</code>.
+<code>'.'</code> in <code>value</code>.
                 </li>
                 <li>
 Set <code>milliseconds</code> to the integer value of the digits of
-<code>encoderData.value</code> beginning at position
+<code>value</code> beginning at position
 <code>millisecondIndex + 1</code>.
                 </li>
                 <li>
@@ -3408,15 +3819,13 @@ Set <code>expectedDate</code> to the ISO 8601 string for the instant
 since the Unix epoch.
                 </li>
                 <li>
-If <code>encoderData.value</code> is not equal to
-<code>expectedDate</code>, the compression would be lossy. Return a
-CBOR encoding of <code>encoderData.value</code> as a Major Type 3
-(text string) object.
+If <code>value</code> is not equal to
+<code>expectedDate</code>, the compression would be lossy. Return
+<code>value</code>.
                 </li>
                 <li>
-Return a CBOR encoding of the two-element array
-<code>[secondsSinceEpoch, milliseconds]</code>: Major Type 4 (array)
-containing two Major Type 0 (unsigned integer) items.
+Otherwise, return the two-element array
+<code>[secondsSinceEpoch, milliseconds]</code>.
                 </li>
               </ol>
             </li>
@@ -3426,8 +3835,8 @@ containing two Major Type 0 (unsigned integer) items.
         <section>
           <h4>Create XSD DateTime Decoder</h4>
           <p>
-This algorithm takes a value <code>valueToDecode</code>, and returns a
-decoder object or <code>undefined</code>.
+This algorithm takes a value <code>valueToDecode</code>, and returns an optional
+decoder object.
           </p>
           <ol>
             <li>
@@ -3438,7 +3847,7 @@ If <code>valueToDecode</code> is an array of exactly two elements where
 both elements are numbers, return a decoder object.
             </li>
             <li>
-Otherwise, return <code>undefined</code>.
+Otherwise, return.
             </li>
           </ol>
         </section>
@@ -3523,37 +3932,21 @@ The following multibase encodings are supported:
         </table>
 
         <section>
-          <h4>Create Multibase Encoder</h4>
-          <p>
-This algorithm takes a value <code>value</code>, and returns an encoder
-object or <code>undefined</code>.
-          </p>
-          <ol>
-            <li>
-If <code>value</code> is not a string, return <code>undefined</code>.
-            </li>
-            <li>
-If the first character of <code>value</code> is <code>'z'</code>,
-<code>'u'</code>, or <code>'M'</code>, return an encoder object
-containing <code>value</code>.
-            </li>
-            <li>
-Otherwise, return <code>undefined</code> (unsupported multibase
-encoding).
-            </li>
-          </ol>
-        </section>
-
-        <section>
           <h4>Encode Multibase</h4>
           <p>
-This algorithm takes an encoder object from
-<a href="#create-multibase-encoder"></a>, and returns CBOR binary data.
+This algorithm takes a value <code>value</code>, and returns an optional byte sequence.
           </p>
           <ol>
             <li>
+If <code>value</code> is not a string, return.
+            </li>
+            <li>
 Set <code>prefixChar</code> to the first character of
-<code>encoderData.value</code>.
+<code>value</code>.
+            </li>
+            <li>
+If <code>prefixChar</code> is neither <code>'z'</code>,
+<code>'u'</code>, nor <code>'M'</code>, return.
             </li>
             <li>
 Set <code>prefixByte</code> to the <a>Multibase Prefix Byte</a>
@@ -3561,7 +3954,7 @@ corresponding to <code>prefixChar</code>.
             </li>
             <li>
 Set <code>content</code> to the substring of
-<code>encoderData.value</code> beginning after the first character.
+<code>value</code> beginning after the first character.
             </li>
             <li>
 If <code>prefixChar</code> is <code>'z'</code>, set
@@ -3585,8 +3978,7 @@ Set <code>bytes</code> to a byte array of length
 <code>suffixBytes</code>.
             </li>
             <li>
-Return a CBOR encoding of <code>bytes</code> as a Major Type 2 (byte
-string) object.
+Return <code>bytes</code>.
             </li>
           </ol>
         </section>
@@ -3594,20 +3986,19 @@ string) object.
         <section>
           <h4>Create Multibase Decoder</h4>
           <p>
-This algorithm takes a value <code>valueToDecode</code>, and returns a
-decoder object or <code>undefined</code>.
+This algorithm takes a value <code>valueToDecode</code>, and returns an optional
+decoder object.
           </p>
           <ol>
             <li>
-If <code>valueToDecode</code> is not a byte string, return
-<code>undefined</code>.
+If <code>valueToDecode</code> is not a byte string, return.
             </li>
             <li>
 If the first byte of <code>valueToDecode</code> is <code>0x7a</code>,
 <code>0x75</code>, or <code>0x4d</code>, return a decoder object.
             </li>
             <li>
-Otherwise, return <code>undefined</code> (unsupported multibase
+Otherwise, return (unsupported multibase
 prefix byte).
             </li>
           </ol>
@@ -3683,8 +4074,8 @@ Return `prefix`.
       <section>
         <h2>Get Registry Entry ID Algorithm</h2>
         <p>
-This algorithm takes an encoded CBOR-LD payload `cborldBytes` as input, and returns
-`suffix`, the main data to be decoded, as well as the `registryEntryId` value that
+This algorithm takes a byte sequence `cborldBytes` as input, and returns
+a byte sequence `suffix`, the main data to be decoded, and the `registryEntryId` value that
 should be used to decompress `suffix`.
         </p>
         <ol>
